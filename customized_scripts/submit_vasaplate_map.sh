@@ -74,41 +74,55 @@ jobid=extract-${lib}
 jcbc=1
 jcbc=$(sbatch --export=All -c 1 -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out -t 48:00:00 --mem=10G --wrap="${p2s}/extractBC.sh ${lib} vasaplate ${p2s}")
 jcbc=$(echo $jcbc | awk '{print $NF}')
+  # Some edits should be made here, eventually, the mapping should be done using 
+  # both reads, and also reads from my primer could be separated to different
+  # files
 
 ### trim file
 jobid=trim-${lib}
 jtrim=2
 jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/trim.sh ${lib}_cbc.fastq.gz ${p2trimgalore} ${p2cutadapt}")
 jtrim=$(echo $jtrim | awk '{print $NF}')
+  # note that this is applied to only r2 files -- i think cutadapt is compatible
+  # with paired reads, but pro'lly needs extra settings
 
 ### ribo-map
 jobid=ribo-${lib}
 jribo=3
 jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/ribo-bwamem.sh $riboref ${lib}_cbc_trimmed_homoATCG.fq.gz ${lib}_cbc_trimmed_homoATCG $p2bwa $p2samtools y $p2s")
 jribo=$(echo $jribo | awk '{print $NF}')
+  # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
+  # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping
 
 ### map to genome
 jobid=gmap-$lib
 jgmap=4
 jgmap=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jribo --wrap="${p2s}/map_star.sh ${p2star} ${p2samtools} ${genome} ${lib}_cbc_trimmed_homoATCG.nonRibo.fastq.gz ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_")
 jgmap=$(echo $jgmap | awk '{print $NF}')
+  # this script "just" calls the star mapping
 
 ### get bed files 
+  # note that there can be ambiguities in where stuff needs to be mapped
+  # mostly due to overlapping annotation for whatever reason or
+  # multi-mappers
 jobid=b2bs-$lib
 jb2bs=5
 jb2bs=$(sbatch --export=All -c 1 -N 1 -J $jobid -o ${jobid}.err -t 24:00:00 --mem=80G --dependency=afterany:$jgmap --wrap="${p2s}/deal_with_singlemappers.sh ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_Aligned.out.bam ${refBED} y")
 jb2bs=$(echo $jb2bs | awk '{print $NF}')
+  # this script uses awk commands to apply a set of pre-determined rules for 
+  # dealing with ambiguities in the assignment of locations to ref transcripts
 
 jobid=b2bm-$lib
 jb2bm=6
 jb2bm=$(sbatch --export=All -c 1 -N 1 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jgmap --wrap="${p2s}/deal_with_multimappers.sh ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_Aligned.out.bam ${refBED} y")
 jb2bm=$(echo $jb2bm | awk '{print $NF}')
+  # same, but now for multi-mappers
 
 ### count table
 jobid=cout-$lib
 jcout=7
 jcout=$(sbatch --export=All -c 1 -N 1 -J $jobid -o ${jobid}.err -t 120:00:00 --mem=80G --dependency=afterany:$jb2bs --dependency=afterany:$jb2bm --wrap="${p2s}/countTables_final.py ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${lib}_cbc_trimmed_homoATCG.nonRibo_E99_Aligned vasa")
-
+  # then, a count table is created
 
 
 

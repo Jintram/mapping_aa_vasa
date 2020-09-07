@@ -52,6 +52,8 @@ cbcfile = args.cbcfile
 hd = args.cbchd
 outdir = args.outdir
 
+# wdir = os.getcwd() # allows for easier interaction during testing
+
 #### Find input fastq files ####
 fq1 = glob.glob(fqr + '_R1*.fastq.gz')
 fq2 = glob.glob(fqr + '_R2*.fastq.gz')
@@ -81,27 +83,40 @@ if not os.path.isdir(outdir):
 #### Read fastq files and assign cell barcode and UMI ####
 fout = open(outdir + '/' + fqr + '_cbc.fastq', 'w')
 ns = 0
+loopcount = 0
 with gzip.open(fq1) as f1, gzip.open(fq2) as f2: 
     for idx, (l1, l2) in enumerate(zip(f1, f2)):
+        loopcount += 1
+        
+        # read current line from R1, R2
         l1, l2 = str(l1.rstrip().rsplit()[0], 'utf-8'), str(l2.rstrip().rsplit()[0], 'utf-8')
         l = np.mod(idx,4)
+
+        # Each entry consists of 4 consecutive lines, go over them 1-by-1
+        # line 1, read to nX ("name"), check consistency
         if l == 0:
             n1, n2 = l1, l2
             if not n1 == n2:
                 print (n1, n2)
-                sys.exit('fastq files not syncrhonized (@name)')
+                sys.exit('fastq files not synchronized (@name)')
+        # line 2, read to sX ("sequence")
         if l == 1:
             s1, s2 = l1, l2
+        # line 3, read to pX ("plus sign", separator)
         if l == 2:
             p1, p2 = l1[0], l2[0]
             if not p1 == p2: # == '+':
                 print(l1, l2, p1, p2)
                 sys.exit('fastq files not synchronized (+)')
+        # line 4, read to qX ("quality"), also start processing
         if l == 3:
             q1, q2 = l1, l2
             if len(q1) != len(s1) or len(q2) != len(s2):
                 sys.exit('phred and read length not mathch!')
 
+            # all 4 lines read, now we can process
+            
+            # determine BC + UMI
             if bcread == 'R1':
                 bcseq = s1[:lumi+lcbc]
                 bcphred = q1[:lumi+lcbc]
@@ -111,29 +126,39 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 bcseq = s2[:lumi+lcbc]
                 bcphred = q2[:lumi+lcbc]
                 s2 = s2[lumi+lcbc:]
-                q2 = q2[lumi+lcbc:]
+                q2 = q2[lumi+lcbc:]  
+                
             if not umifirst:
                 cellbcseq = bcseq[:lcbc]
                 umiseq = bcseq[lcbc:]
-                cellbcphred = bcphred[:lcbc]
-                umiphred = bcphred[lcbc:]
+                cellbcphred = bcphred[:lcbc] # quality string
+                umiphred = bcphred[lcbc:]  # quality string
             else:
                 cellbcseq = bcseq[lumi:]
                 umiseq = bcseq[:lumi]
-                cellbcphred = bcphred[lumi:]
-                umiphred = bcphred[:lumi]
+                cellbcphred = bcphred[lumi:]  # quality string
+                umiphred = bcphred[:lumi]  # quality string
 
             try:
+                # get cell ID from BC (failures are skipped I guess)
                 cellID, originalBC = allbc_df.loc[cellbcseq]
                 ns += 1
                 cellbcphred = ''.join([chr(ord(c)+32) for c in cellbcphred])
+                print('cellbcphred = '+cellbcphred)
                 umiphred = ''.join([chr(ord(c)+32) for c in umiphred])
+                print('umiphred = '+umiphred)
 
+                # prepare new name, and output to single file
                 name = ';'.join([n1] + [':'.join(x) for x in zip(['SS','CB','QT','RX','RQ','SM'], [cellbcseq, originalBC, cellbcphred, umiseq, umiphred, str(cellID).zfill(3)])])
                 s, q = (s1, q1) if bioread == 'R1' else (s2, q2)
+                
+                # write to output file
                 fout.write( '\n'.join([name, s, '+', q, '']))
             except: 
                 continue
+            
+        if loopcount > 100:
+            break
 
 nt = (idx+1)/4
 fout.close()

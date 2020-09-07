@@ -13,6 +13,10 @@ path2cutadapt=$3
 # trim adaptors
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt ${file2trim}
 mv ${file2trim}_trimming_report.txt ${file2trim%.fastq.gz}_trimming_report.txt
+  # note that "For adapter trimming, Trim Galore! uses the first 13 bp of Illumina 
+  # standard adapters ('AGATCGGAAGAGC') by default (suitable for both ends of 
+  # paired-end libraries), but accepts other adapter sequence, too"
+  # (trim galore documentation at https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/)
 
 # trim homopolymers 
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt -a AAAAAAAAAAAAAAAAAAAA --no_report_file ${file2trim%.fastq.gz}_trimmed.fq.gz
