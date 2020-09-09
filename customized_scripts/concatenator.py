@@ -11,6 +11,7 @@ import pandas as pd
 from pandas.io.parsers import read_csv
 from collections import Counter
 import glob
+import re
 
 #### function to identify cells from barcodes, allowing some edit distances ####
 def find_compatible_barcodes(barcode, HDmax = 0):
@@ -51,6 +52,7 @@ umifirst = args.umifirst
 cbcfile = args.cbcfile
 hd = args.cbchd
 outdir = args.outdir
+target_primer_len = 20
 
 # wdir = os.getcwd() # allows for easier interaction during testing
 
@@ -81,13 +83,17 @@ if not os.path.isdir(outdir):
     os.system('mkdir '+outdir)
 
 #### Read fastq files and assign cell barcode and UMI ####
-fout = open(outdir + '/' + fqr + '_cbc.fastq', 'w')
+fout_R1 = open(outdir + '/' + fqr + '_R1_cbc.fastq', 'w')
+fout_R2 = open(outdir + '/' + fqr + '_R2_cbc.fastq', 'w')
+
 ns = 0
-loopcount = 0
+readcount = 0
+reads_polyT = 0
+reads_targeted = 0
+reads_unclassified = 0
 with gzip.open(fq1) as f1, gzip.open(fq2) as f2: 
     for idx, (l1, l2) in enumerate(zip(f1, f2)):
-        loopcount += 1
-        
+
         # read current line from R1, R2
         l1, l2 = str(l1.rstrip().rsplit()[0], 'utf-8'), str(l2.rstrip().rsplit()[0], 'utf-8')
         l = np.mod(idx,4)
@@ -110,23 +116,62 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 sys.exit('fastq files not synchronized (+)')
         # line 4, read to qX ("quality"), also start processing
         if l == 3:
+            readcount += 1
+            classification = "none"
+            extra_trimming = 0
+        
             q1, q2 = l1, l2
             if len(q1) != len(s1) or len(q2) != len(s2):
                 sys.exit('phred and read length not mathch!')
 
             # all 4 lines read, now we can process
+
+            # customized pre-processing of the read, to look for the targeted
+            # primer
             
+            # if re.search("|".join(target_primers), s1): # not robust against artefacts
+            # determine position primer in read
+                #target_primer_pos = re.search("|".join(target_primers), s1).span()
+                #extra_trimming = target_primer_pos[1]-target_primer_pos[0]
+                
+            # get the sequence at the position where targeted primer should be located if present
+            # (otherwise it'll be poly-T)
+            # Note that this cannot deal with primers of different lengths yet,
+            # this can of course be adjusted, probably easiest by writing
+            # a little function that goes over each primer
+            # For now we won't do that, since that'll cost more processing time
+            seq_at_primer_pos = s1[lumi+lcbc:lumi+lcbc+target_primer_len]
+            # now act accordingly
+            if (seq_at_primer_pos in target_primers):     
+                # assign primer sequence as classification
+                classification = seq_at_primer_pos
+                # set extra trimming to remove the primer sequence
+                extra_trimming = target_primer_len 
+                # message
+                print("Classified as targeted read ("+classification+")")
+                reads_targeted += 1
+            # classify as poly-T when 20 Ts found (primer has 26, but not sure reliable poly-read); 26=TTTTTTTTTTTTTTTTTTTTTTTTTT
+            # poly-T sequences will be removed later by trim galore / cutadapt
+            elif (seq_at_primer_pos[0:10] == 'TTTTTTTTTT'):                 
+                classification = "polyT"
+                reads_polyT += 1
+                print("Classified as poly-T read.")                
+            else:
+                reads_unclassified += 1
+                print("Read not classified")
+                print(s1)
+                
             # determine BC + UMI
             if bcread == 'R1':
                 bcseq = s1[:lumi+lcbc]
                 bcphred = q1[:lumi+lcbc]
-                s1 = s1[lumi+lcbc:]
-                q1 = q1[lumi+lcbc:]
+                s1 = s1[lumi+lcbc+extra_trimming:]
+                q1 = q1[lumi+lcbc+extra_trimming:]
             elif bcread == 'R2':
                 bcseq = s2[:lumi+lcbc]
                 bcphred = q2[:lumi+lcbc]
-                s2 = s2[lumi+lcbc:]
-                q2 = q2[lumi+lcbc:]  
+                s2 = s2[lumi+lcbc+extra_trimming:]
+                q2 = q2[lumi+lcbc+extra_trimming:]  
                 
             if not umifirst:
                 cellbcseq = bcseq[:lcbc]
@@ -143,25 +188,26 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 # get cell ID from BC (failures are skipped I guess)
                 cellID, originalBC = allbc_df.loc[cellbcseq]
                 ns += 1
-                cellbcphred = ''.join([chr(ord(c)+32) for c in cellbcphred])
-                print('cellbcphred = '+cellbcphred)
+                cellbcphred = ''.join([chr(ord(c)+32) for c in cellbcphred])                
                 umiphred = ''.join([chr(ord(c)+32) for c in umiphred])
-                print('umiphred = '+umiphred)
 
-                # prepare new name, and output to single file
-                name = ';'.join([n1] + [':'.join(x) for x in zip(['SS','CB','QT','RX','RQ','SM'], [cellbcseq, originalBC, cellbcphred, umiseq, umiphred, str(cellID).zfill(3)])])
+                # prepare new name, and output respective reads to files
+                name = ';'.join([n1] + [':'.join(x) for x in zip(['SS','CB','QT','RX','RQ','SM','CL'], [cellbcseq, originalBC, cellbcphred, umiseq, umiphred, str(cellID).zfill(3), classification])])
                 s, q = (s1, q1) if bioread == 'R1' else (s2, q2)
+                     
+                fout_R1.write( '\n'.join([name, s1, '+', q1, '']))
+                fout_R2.write( '\n'.join([name, s, '+', q, '']))
                 
-                # write to output file
-                fout.write( '\n'.join([name, s, '+', q, '']))
             except: 
+                print('Fail - skip')
                 continue
             
-        if loopcount > 100:
+        if readcount > 1000:
             break
 
 nt = (idx+1)/4
-fout.close()
+fout_R1.close()
+fout_R2.close()
 
 #### LOG ####
 fout = open(outdir + '/' + fqr + '.log', 'w')
@@ -173,7 +219,11 @@ fout.write(', '.join(['cell specific barcode length:', str(lcbc), '\n']))
 fout.write(', '.join(['umi length:', str(lumi), '\n']))
 fout.write(', '.join(['umi goes first:', str(umifirst),'\n']))
 fout.write(', '.join(['total sequenced reads:', str(nt), '\n']))
+fout.write(', '.join(['reads classified as poly-T:', str(reads_polyT), '\n']))
+fout.write(', '.join(['reads classified as targeted:', str(reads_targeted), '\n']))
+fout.write(', '.join(['reads not classified:', str(reads_unclassified), '\n']))
 fout.write(', '.join(['reads with proper barcodes:', str(ns), str(1.0*ns/nt), '\n']))
+
 fout.close()
 
 #### zip fastq file ####
