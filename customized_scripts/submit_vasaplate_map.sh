@@ -81,7 +81,7 @@ jcbc=$(echo $jcbc | awk '{print $NF}')
 ### trim file
 jobid=trim-${lib}
 jtrim=2
-jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/trim.sh ${lib}_cbc.fastq.gz ${p2trimgalore} ${p2cutadapt}")
+jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/trim.sh ${lib} ${p2trimgalore} ${p2cutadapt}")
 jtrim=$(echo $jtrim | awk '{print $NF}')
   # note that this is applied to only r2 files -- i think cutadapt is compatible
   # with paired reads, but pro'lly needs extra settings

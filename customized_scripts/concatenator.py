@@ -29,6 +29,7 @@ def find_compatible_barcodes(barcode, HDmax = 0):
                     s0 = s0[:x] + l + s0[x+1:]
                 compatible_barcodes.add(s0)
     return list(compatible_barcodes)
+    
 
 #### check input variables ####
 parser = argp.ArgumentParser(description = 'Concatenates bcread to bioread qname.')
@@ -39,6 +40,7 @@ parser.add_argument('--lencbc', '-lcbc', help = 'cell barcode length (integer)',
 parser.add_argument('--lenumi', '-lumi', help = 'umi length (integer)', type = int, default = 6)
 parser.add_argument('--umifirst', help = 'logical variable: umi before cel barcode', action = 'store_true')
 parser.add_argument('--cbcfile', '-cbcf', help = 'cell specific barcode file. Please, provide full name')
+parser.add_argument('--primerfile', '-pf', help = 'location of csv file with sequences of RT primers for targeted sequencing', type = str)
 parser.add_argument('--cbchd', help = 'collapse cell barcodes with the given hamming distance', type = int, default = 0)
 parser.add_argument('--outdir', help = 'output directory for cbc.fastq.gz and log files', type = str, default = './')
 args = parser.parse_args()
@@ -52,6 +54,7 @@ umifirst = args.umifirst
 cbcfile = args.cbcfile
 hd = args.cbchd
 outdir = args.outdir
+primerfile = args.primerfile
 target_primer_len = 20
 
 # wdir = os.getcwd() # allows for easier interaction during testing
@@ -77,6 +80,9 @@ bc_df = read_csv(cbcfile, sep = '\t', names = ['bc','cellID'], index_col = 0)
 bc_df['compatible_bcs'] = bc_df.apply(lambda x: find_compatible_barcodes(x.name, hd), axis = 1)
 cnt_allbcs = Counter([x for idx in bc_df.index for x in bc_df.loc[idx, 'compatible_bcs']])
 allbc_df = pd.DataFrame({x: {'cellID': bc_df.loc[idx,'cellID'], 'original': idx} for idx in bc_df.index for x in bc_df.loc[idx, 'compatible_bcs'] if cnt_allbcs[x]==1}).T
+
+# additionally, read primers
+target_primers = read_csv(primerfile, sep = '\t', header=None)[0].tolist()
 
 ### Create output directory if it does not exist ####
 if not os.path.isdir(outdir):
@@ -148,23 +154,24 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 # set extra trimming to remove the primer sequence
                 extra_trimming = target_primer_len 
                 # message
-                print("Classified as targeted read ("+classification+")")
+                # print("Classified as targeted read ("+classification+")")
                 reads_targeted += 1
             # classify as poly-T when 20 Ts found (primer has 26, but not sure reliable poly-read); 26=TTTTTTTTTTTTTTTTTTTTTTTTTT
             # poly-T sequences will be removed later by trim galore / cutadapt
             elif (seq_at_primer_pos[0:10] == 'TTTTTTTTTT'):                 
                 classification = "polyT"
                 reads_polyT += 1
-                print("Classified as poly-T read.")                
+                # print("Classified as poly-T read.")                
             else:
                 reads_unclassified += 1
-                print("Read not classified")
-                print(s1)
+                # print("Read not classified")
+                # print(s1)
                 
             # determine BC + UMI
             if bcread == 'R1':
                 bcseq = s1[:lumi+lcbc]
                 bcphred = q1[:lumi+lcbc]
+                # s1_x = s1 # debug
                 s1 = s1[lumi+lcbc+extra_trimming:]
                 q1 = q1[lumi+lcbc+extra_trimming:]
             elif bcread == 'R2':
@@ -199,11 +206,12 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 fout_R2.write( '\n'.join([name, s, '+', q, '']))
                 
             except: 
-                print('Fail - skip')
+                # print('Fail - skip')
                 continue
-            
-        if readcount > 1000:
-            break
+
+        # For testing purposes
+        #if readcount >= 1000:
+        #    break
 
 nt = (idx+1)/4
 fout_R1.close()
@@ -227,4 +235,9 @@ fout.write(', '.join(['reads with proper barcodes:', str(ns), str(1.0*ns/nt), '\
 fout.close()
 
 #### zip fastq file ####
-os.system('gzip '+ outdir + '/' + fqr + '_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_R1_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_R2_cbc.fastq')
+
+
+
+

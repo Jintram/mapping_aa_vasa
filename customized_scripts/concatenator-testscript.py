@@ -16,8 +16,10 @@ cbcfile = '/Users/m.wehrens/Documents/git_repos/mapping_aa_private_vasa/customiz
 hd = 0
 outdir = '/Users/m.wehrens/Data_notbacked/mapping-test-local/pilot3'
 
-target_primers = ['GGTCATGAGTCCTTCCACGA','AACGTACAAAGTGGGGATGG','ACCCCTGGAGACTTTGTCTC',
-                  'TGCGCTCCAGGATGTAGCCC','CCATCGTAGGCAGGCGGCTC','CAGGATGTAGCCCAGGATGG']
+#target_primers = ['GGTCATGAGTCCTTCCACGA','AACGTACAAAGTGGGGATGG','ACCCCTGGAGACTTTGTCTC',
+#                  'TGCGCTCCAGGATGTAGCCC','CCATCGTAGGCAGGCGGCTC','CAGGATGTAGCCCAGGATGG']
+
+primerfile = '/Users/m.wehrens/Documents/git_repos/mapping_aa_private_vasa/customized_scripts/targetedprimers.tsv'
 
 #os.chdir('/Volumes/workdrive_m.wehrens_hubrecht/mapping-test/pilot3')
 #wdir = '/Volumes/workdrive_m.wehrens_hubrecht/mapping-test/pilot3/'
