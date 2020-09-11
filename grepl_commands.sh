@@ -1,0 +1,18 @@
+# No boost MYBPC3
+cat MW-TS-S2-TargOnly-NB_HTMH2BGXF_S24_L001_R2_001.fastq | grep 'AGGACCAGGTCAACCTCACA' -c
+# No boost MYH7: 
+cat MW-TS-S2-TargOnly-NB_HTMH2BGXF_S24_L001_R2_001.fastq | grep 'GGCTCGTCCTTTCAGACTGT' -c
+# No boost GAPDH: 
+cat MW-TS-S2-TargOnly-NB_HTMH2BGXF_S24_L001_R2_001.fastq | grep 'CCTGCACCACCAACTGCTTA' -c
+
+
+
+With boost MYBPC3: 
+cat MW-TS-S2A-TargOnly-Bst_HTMH2BGXF_S26_L001_R2_001.fastq | grep 'AGGACCAGGTCAACCTCACA' -c
+With boost MYH7: 
+cat MW-TS-S2A-TargOnly-Bst_HTMH2BGXF_S26_L001_R2_001.fastq | grep 'GGCTCGTCCTTTCAGACTGT' -c
+With boost GAPDH: 
+cat MW-TS-S2A-TargOnly-Bst_HTMH2BGXF_S26_L001_R2_001.fastq | grep 'CCTGCACCACCAACTGCTTA' -c
+
+
+

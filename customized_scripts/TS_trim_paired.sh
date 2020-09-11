@@ -13,8 +13,8 @@ cutoff=10 # cutoff length to remove reads
 
 # trim adaptors
 ${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt ${file2trim}_R1_cbc.fastq.gz ${file2trim}_R2_cbc.fastq.gz --length $cutoff --retain_unpaired
-mv ${file2trim}_R1_cbc.fastq_trimming_report.txt ${file2trim}_R1_trimming_report.txt
-mv ${file2trim}_R2_cbc.fastq_trimming_report.txt ${file2trim}_R2_trimming_report.txt 
+mv ${file2trim}_R1_cbc.fastq.gz_trimming_report.txt ${file2trim}_R1_trimming_report.txt
+mv ${file2trim}_R2_cbc.fastq.gz_trimming_report.txt ${file2trim}_R2_trimming_report.txt 
   # Note1: "For adapter trimming, Trim Galore! uses the first 13 bp of Illumina 
   # standard adapters ('AGATCGGAAGAGC') by default (suitable for both ends of 
   # paired-end libraries), but accepts other adapter sequence, too"
@@ -41,17 +41,17 @@ rm ${file2trim}_R1_cbc_val_1_HA_val_1.fq.gz
 mv ${file2trim}_R2_cbc_val_2_HA_val_2.fq.gz ${file2trim}_R2_cbc_val_2_HAT.fq.gz
 rm ${file2trim}_R2_cbc_val_2_HA_val_2.fq.gz
 
-${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt -a CCCCCCCCCCCCCCCCCCCC --no_report_file ${file2trim}_R1.fq_trimmed_HAT.fq.gz ${file2trim}_R2.fq_trimmed_HA.fq.gz --length $cutoff --retain_unpaired
-mv ${file2trim}_R1.fq_trimmed_HAT_trimmed.fq.gz ${file2trim}_R1.fq_trimmed_HATC.fq.gz
-rm ${file2trim}_R1.fq_trimmed_HAT.fq.gz
-mv ${file2trim}_R2.fq_trimmed_HAT_trimmed.fq.gz ${file2trim}_R2.fq_trimmed_HATC.fq.gz
-rm ${file2trim}_R2.fq_trimmed_HAT.fq.gz
+${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt -a CCCCCCCCCCCCCCCCCCCC --no_report_file ${file2trim}_R1_cbc_val_1_HAT.fq.gz ${file2trim}_R2_cbc_val_2_HAT.fq.gz --length $cutoff --retain_unpaired
+mv ${file2trim}_R1_cbc_val_1_HAT_val_1.fq.gz ${file2trim}_R1_cbc_val_1_HATC.fq.gz
+rm ${file2trim}_R1_cbc_val_1_HAT_val_1.fq.gz
+mv ${file2trim}_R2_cbc_val_2_HAT_val_2.fq.gz ${file2trim}_R2_cbc_val_2_HATC.fq.gz
+rm ${file2trim}_R2_cbc_val_2_HAT_val_2.fq.gz
 
-${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt -a GGGGGGGGGGGGGGGGGGGG --no_report_file ${file2trim}_R1.fq_trimmed_HATC.fq.gz ${file2trim}_R2.fq_trimmed_HA.fq.gz --length $cutoff --retain_unpaired
-mv ${file2trim}_R1.fq_trimmed_HATC_trimmed.fq.gz ${file2trim}_R1.fq_trimmed_homoATCG.fq.gz
-rm ${file2trim}_R1.fq_trimmed_HATC.fq.gz
-mv ${file2trim}_R2.fq_trimmed_HATC_trimmed.fq.gz ${file2trim}_R2.fq_trimmed_homoATCG.fq.gz
-rm ${file2trim}_R2.fq_trimmed_HATC.fq.gz
+${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt -a GGGGGGGGGGGGGGGGGGGG --no_report_file ${file2trim}_R1_cbc_val_1_HATC.fq.gz ${file2trim}_R2_cbc_val_2_HATC.fq.gz --length $cutoff --retain_unpaired
+mv ${file2trim}_R1_cbc_val_1_HATC_val_1.fq.gz ${file2trim}_R1_cbc_val_1_HATCG.fq.gz
+rm ${file2trim}_R1_cbc_val_1_HATC_val_1.fq.gz
+mv ${file2trim}_R2_cbc_val_2_HATC_val_2.fq.gz ${file2trim}_R2_cbc_val_2_HATCG.fq.gz
+rm ${file2trim}_R2_cbc_val_2_HATC_val_2.fq.gz
 
 
 

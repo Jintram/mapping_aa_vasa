@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep 11 16:14:08 2020
+
+@author: m.wehrens
+"""
+
+# test ribo-read selection locally
+
+bamfile = 'MW-TS-S1-Hybr-NB_HTMH2BGXF_S23_L001.nsorted.all-ribo.bam' # sys.argv[1]
+stranded = 'y' # sys.argv[2]
+output = 'MW-TS-S1-Hybr-NB_HTMH2BGXF_S23_L001' # sys.argv[3]
+
+# position-sorted file with index
+bamfile = 'MW-TS-S1-Hybr-NB_HTMH2BGXF_S23_L001.isorted.all-ribo.bam' # sys.argv[1]

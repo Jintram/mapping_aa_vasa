@@ -89,8 +89,13 @@ if not os.path.isdir(outdir):
     os.system('mkdir '+outdir)
 
 #### Read fastq files and assign cell barcode and UMI ####
-fout_R1 = open(outdir + '/' + fqr + '_R1_cbc.fastq', 'w')
-fout_R2 = open(outdir + '/' + fqr + '_R2_cbc.fastq', 'w')
+# For TS reads
+fout_R1_TS = open(outdir + '/' + fqr + '_TS_R1_cbc.fastq', 'w')
+fout_R2_TS = open(outdir + '/' + fqr + '_TS_R2_cbc.fastq', 'w')
+# For polyT
+fout_R2_pT = open(outdir + '/' + fqr + '_pT_R2_cbc.fastq', 'w')
+# For reads not classified
+fout_R2_nc = open(outdir + '/' + fqr + '_nc_R2_cbc.fastq', 'w')
 
 ns = 0
 readcount = 0
@@ -150,7 +155,8 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
             # now act accordingly
             if (seq_at_primer_pos in target_primers):     
                 # assign primer sequence as classification
-                classification = seq_at_primer_pos
+                classification   = "targeted"
+                current_primer_seq = seq_at_primer_pos
                 # set extra trimming to remove the primer sequence
                 extra_trimming = target_primer_len 
                 # message
@@ -200,22 +206,30 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
 
                 # prepare new name, and output respective reads to files
                 name = ';'.join([n1] + [':'.join(x) for x in zip(['SS','CB','QT','RX','RQ','SM','CL'], [cellbcseq, originalBC, cellbcphred, umiseq, umiphred, str(cellID).zfill(3), classification])])
-                s, q = (s1, q1) if bioread == 'R1' else (s2, q2)
-                     
-                fout_R1.write( '\n'.join([name, s1, '+', q1, '']))
-                fout_R2.write( '\n'.join([name, s, '+', q, '']))
+                  
+                if (classification == 'polyT'):
+                    fout_R2_pT.write( '\n'.join([name, s2, '+', q2, '']))
+                elif (classification == 'targeted'):
+                    name += ';p_seq:'+current_primer_seq # add primer seq to name
+                    fout_R1_TS.write( '\n'.join([name, s1, '+', q1, '']))
+                    fout_R2_TS.write( '\n'.join([name, s2, '+', q2, '']))
+                else:
+                    fout_R2_nc.write( '\n'.join([name, s2, '+', q2, '']))
+
                 
             except: 
                 # print('Fail - skip')
                 continue
 
         # For testing purposes
-        #if readcount >= 1000:
-        #    break
+        if readcount >= 1000:
+            break
 
 nt = (idx+1)/4
-fout_R1.close()
-fout_R2.close()
+fout_R2_pT.close()
+fout_R1_TS.close()
+fout_R2_TS.close()
+fout_R2_nc.close()
 
 #### LOG ####
 fout = open(outdir + '/' + fqr + '.log', 'w')
@@ -235,8 +249,10 @@ fout.write(', '.join(['reads with proper barcodes:', str(ns), str(1.0*ns/nt), '\
 fout.close()
 
 #### zip fastq file ####
-os.system('gzip '+ outdir + '/' + fqr + '_R1_cbc.fastq')
-os.system('gzip '+ outdir + '/' + fqr + '_R2_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_TS_R1_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_TS_R2_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_pT_R2_cbc.fastq')
+os.system('gzip '+ outdir + '/' + fqr + '_nc_R2_cbc.fastq')
 
 
 

@@ -5,6 +5,7 @@ import pandas as pd
 import pysam
 from collections import Counter
 
+# check input
 try:
     bamfile = sys.argv[1]
     stranded = sys.argv[2]
@@ -18,24 +19,38 @@ nreads = 0
 nunmapped = 0
 nmapped = Counter()
 fout = open(output + '.nonRibo.fastq', 'w')
+# go over bam file entries
 for i, r in enumerate(bam.fetch(until_eof = True)):
     if i == 0:
         reads = [r]
         nreads += 1
+        print(reads)
     else:
         if r.qname == reads[0].qname:
             reads.append(r)
         else: 
             if all([rs.is_unmapped for rs in reads]): # all umapped => fastq file
+                
+                # output to fastq file
                 r0 = reads[0]
                 r0.qname = '@' + r0.qname
                 fout.write('\n'.join([r0.qname, r0.seq, '+', r0.qual]) + '\n')
                 nunmapped += 1
+                
+                # * but here, we'd like to also output the mate to a 2nd file
+                # i don't think it matters which mate to put were?
+                # ^--> no since flipping the insert should be equivalent
+                # * but how do we prevent creating double entries?
+                # buuuut... I guess they're sorted by name, so should be consecutive ones?
+                
             else:
+                
                 if stranded == 'n': 
                     mapreads = [x for x in reads if not x.is_unmapped]
+                    
                 elif stranded == 'y':
-                    mapreads = [x for x in reads if (not x.is_unmapped) and (not x.is_reverse)] 
+                    mapreads = [x for x in reads if (not x.is_unmapped) and (not x.is_reverse)]
+                    
                 if len(mapreads) >= 1: # at least one is mapped properly => bam file
                     rgtag = '_'.join(sorted([r.get_tag('RG').rsplit('.')[-1] if 'RG' in [t[0] for t in r.get_tags()] else '-' for r in mapreads]))
                     rgtag = rgtag.replace('-ribo','')
@@ -44,6 +59,7 @@ for i, r in enumerate(bam.fetch(until_eof = True)):
                     new_tags = [t if t[0] != 'RG' else ('RG',rgtag) for t in r0.tags]
                     r0.tags = new_tags
                     bam_out.write(r0)
+                    
                 else:
                     r0 = reads[0]
                     r0.qname = '@' + r0.qname

@@ -69,7 +69,7 @@ then
     refBED=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/Homosapines_ensemble99.homemade_IntronExonTrna.bed
 fi
 
-### extract cell barcodes
+### extract cell barcodes (this will split the read files into 3 batches; poly-T, targeted and unclassified.)
 jobid=extract-${lib}
 jcbc=1
 jcbc=$(sbatch --export=All -c 1 -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out -t 48:00:00 --mem=10G --wrap="${p2s}/extractBC.sh ${lib} vasaplate ${p2s}")
@@ -81,7 +81,12 @@ jcbc=$(echo $jcbc | awk '{print $NF}')
 ### trim file
 jobid=trim-${lib}
 jtrim=2
-jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/trim.sh ${lib} ${p2trimgalore} ${p2cutadapt}")
+# For TS
+jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/TS_trim_paired.sh ${lib}_TS ${p2trimgalore} ${p2cutadapt}")
+# For polyT:
+jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/TS_trim.sh ${lib}_pT_R2 ${p2trimgalore} ${p2cutadapt}")
+# For non-classified:
+jtrim=$(sbatch --export=All -N 1 -J ${jobid} -e ${jobid}.err -o ${jobid}.out --dependency=afterany:$jcbc -t 15:00:00 --mem=10G --wrap="${p2s}/TS_trim.sh ${lib}_nc_R2 ${p2trimgalore} ${p2cutadapt}")
 jtrim=$(echo $jtrim | awk '{print $NF}')
   # note that this is applied to only r2 files -- i think cutadapt is compatible
   # with paired reads, but pro'lly needs extra settings
@@ -89,7 +94,14 @@ jtrim=$(echo $jtrim | awk '{print $NF}')
 ### ribo-map
 jobid=ribo-${lib}
 jribo=3
-jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/ribo-bwamem.sh $riboref ${lib}_cbc_trimmed_homoATCG.fq.gz ${lib}_cbc_trimmed_homoATCG $p2bwa $p2samtools y $p2s")
+# map poly-T reads to ribo
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/ribo-bwamem.sh $riboref ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
+jribo=$(echo $jribo | awk '{print $NF}')
+# map targeted reads to ribo
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/ribo-bwamem.sh ${lib}_pT_R1_cbc_trimmed_HATCG.fq.gz $riboref ${lib}_TS_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_homoATCG $p2bwa $p2samtools y $p2s")
+jribo=$(echo $jribo | awk '{print $NF}')
+# map unclassified reads to ribo
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/ribo-bwamem.sh $riboref ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
 jribo=$(echo $jribo | awk '{print $NF}')
   # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
   # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping
