@@ -21,8 +21,6 @@ nmapped = Counter()
 nmapped_ = 0
 fout_R1 = open(output + '_R1.nonRibo.fastq', 'w')
 fout_R2 = open(output + '_R2.nonRibo.fastq', 'w')
-reads1 = []
-reads2 = []
 # go over bam file entries
 # note that each entry is duplicated because it was mapped twice
 for i, r in enumerate(bam.fetch(until_eof = True)):
@@ -86,12 +84,17 @@ for i, r in enumerate(bam.fetch(until_eof = True)):
                 
             else:
                 
+                # To determine whether hits were mapped, let's focus on R2
+                # (therefor (x.is_read2))
+                # (Alternatively, is_reverse should be properly managed for R1)
+                
+                # retrieve all R2 hits
                 if stranded == 'n': 
-                    mapreads = [x for x in reads if not x.is_unmapped]
+                    mapreads = [x for x in reads if (not x.is_unmapped) and (x.is_read2)]
                     
-                # ignore reverse hits
+                # ignore reverse R2 hits
                 elif stranded == 'y':
-                    mapreads = [x for x in reads if (not x.is_unmapped) and (not x.is_reverse)]
+                    mapreads = [x for x in reads if (not x.is_unmapped) and (not x.is_reverse) and (x.is_read2)]
                     
                 if len(mapreads) >= 1: # at least one is mapped properly => bam file for ribo data
                     rgtag = '_'.join(sorted([r.get_tag('RG').rsplit('.')[-1] if 'RG' in [t[0] for t in r.get_tags()] else '-' for r in mapreads]))
@@ -151,4 +154,8 @@ fout.write('Number of mapped reads: '+'\n')
 for tag in nmapped:
     fout.write('\t'+tag+': '+str(nmapped[tag])+'\n')
 fout.close()
-os.system('gzip '+output+'.nonRibo.fastq')
+os.system('gzip '+output+'_R1.nonRibo.fastq')
+os.system('gzip '+output+'_R2.nonRibo.fastq')
+
+
+

@@ -13,16 +13,17 @@ outfq=$1
 protocol=$2
 path2scripts=$3
 outdir=./
+pythonbin='python3'
 
 if [ $protocol == 'celseq1' ]
 then
-    python3 ${path2scripts}/concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq1.tsv --cbchd 0 --lenumi 4 --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
+    ${pythonbin} ${path2scripts}/TS_concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq1.tsv --cbchd 0 --lenumi 4 --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
 elif [ $protocol == 'celseq2' ]
 then
-    python3 ${path2scripts}/concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq2.tsv --cbchd 0 --lenumi 6 --umifirst --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
+    ${pythonbin} ${path2scripts}/TS_concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq2.tsv --cbchd 0 --lenumi 6 --umifirst --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
 elif [ $protocol == 'vasaplate' ]
 then
-    python3 ${path2scripts}/concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq2.tsv --cbchd 0 --lenumi 6 --umifirst --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
+    ${pythonbin} ${path2scripts}/TS_concatenator.py --fqf ${outfq} --cbcfile ${path2scripts}/bc_celseq2.tsv --cbchd 0 --lenumi 6 --umifirst --outdir ${outdir} -pf ${path2scripts}/targetedprimers.tsv
 else
     echo "unknown protocol [celseq1, celseq2, vasaplate]"
     exit

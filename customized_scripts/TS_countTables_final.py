@@ -14,6 +14,9 @@ try:
 except:
     sys.exit("Please, provide input bed with single mappers (1) bed with multimappers (2) output file (3) and protocol (4)")
 
+###############################################################################
+# Functions
+    
 #
 def addReadCount(cnt, cell, gene, umi, label):
     try:
@@ -43,41 +46,75 @@ def get_cell_UMI(name, protocol = 'vasa'):
     return cell, umi
 
 def gene_assignment_single(genes, labels, infos, covs, tlens):
+    # Note that jS is a customized flag that signals how the mapping 
+    # relates to intron/exon/gene boundaries [I guess --> check Anna -- mw]
+    
+    # if mapped to only one gene, it's simple
     if len(set(genes)) == 1 and len(set(labels)) == 1:
+        
         gene = genes[0]; label = labels[0]; df = pd.DataFrame()
+        
+    # idem, chose intron label if >1 labels though
     elif len(set(genes)) == 1 and len(set(labels)) > 1:
+        
         gene = genes[0]; label = 'intron'; df = pd.DataFrame()
+        
+    # now if mapped >1 gene, then .. 
     else:
+        
+        # sys.exit() # debug purposes
+        
+        # first acquire # mismatching bases
+        nMs_string = [c.rsplit(';nM:')[1].rsplit(';jS:')[0] for c in infos]
+        nMs_sum = [sum([int(i) for i in s.split('/')]) for s in nMs_string]
+            # in case of pairs, the entries look like 1/3, for respective reads.
+            # this approach with sum can handle both single and paired reads.
+        
+        # convert different mappings to dataframes
         df = pd.DataFrame({'genes': genes, 
             'labels': labels,
             'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
-            'nMs': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
+            'nMs': nMs_sum, # [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
             'jSs':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
             'covs': [float(cov) for cov in covs],
             'tlens': [int(tl) for tl in tlens]
             })
+    
+        # select subset of genes that have minimal number of mismatches
         df = df[df['nMs']==df['nMs'].min()]
         gdf = {g: df_g for g, df_g in df.groupby('genes') if '_TEC' not in g}
+        
+        # merge entries of same genes with same information
         for g in gdf:
+            
             if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jSs'])) == 1:
                 gdf[g] = gdf[g].head(1)
+                
+        # if multiple labels remove intron reads [I guess]
         if len(gdf) > 1 and all([gdf[g].shape[0]==1 for g in gdf]):
             if len(set(df['labels'])) > 1: 
-                fdf = df[df['labels']!='intron']
+                fdf = df[df['labels']!='intron'] 
                 gdf = {g: df_g for g, df_g in fdf.groupby('genes') if '_TEC' not in g}
+                
         xg = []
+        
+        #
+        # note that 'N' stands for alignment gap in cigar
         for g in gdf:
 #            if (gdf[g].shape[0] > 1 and 'N' not in gdf[g]['cigars'].iloc[0]) or (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
             if  (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
                 xg.append(g)
+                
         for g in xg:
             del gdf[g]
+            
         if len(gdf) > 1: 
             setjSs = set(pd.concat([gdf[g] for g in gdf])['jSs']); xg = []
             if len(setjSs) > 1 and 'IN' in setjSs: 
                 xg = [g for g in gdf if 'IN' not in gdf[g]['jSs'].values and 'N' not in gdf[g]['cigars'].iloc[0]]
             for g in xg:
                 del gdf[g]
+                
         if len(gdf) >= 1:
             gene = '-'.join(sorted(gdf))
             labels = ['']*len(gdf)
@@ -87,10 +124,17 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
                 else: 
                     labels[i] = 'intron'
             label = '-'.join(labels)
+            
         else:
+            
             gene = ''; label = ''
+            
     return label, gene, df
 
+
+###############################################################################
+# main
+    
 # count reads and assign
 cnt = {}
 countLabels = set()
@@ -124,6 +168,7 @@ with open(bedsingle) as f:
 
 #otc.close()
 
+# again with multi-mappers
 #otc = open(output + '-check_assignments_multipleMappers.txt', 'w')
 with open(bedmulti) as f:
     for i, line in enumerate(f):
@@ -153,6 +198,9 @@ with open(bedmulti) as f:
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
 #otc.close()
 
+###############################################################################
+# more functions
+                
 cntdf = pd.DataFrame(cnt)
 del cnt
 
@@ -234,6 +282,9 @@ def bc2trans(x):
         t = 0
     return  t
 
+###############################################################################
+# more main script
+    
 fout = open(output + '_mapStats.log', 'w')
 
 total_reads_df = cntdf.applymap(lambda x: countTotalReads(x, protocol))
@@ -278,6 +329,9 @@ fout.write('Number of uni-genes:\t' + str(len(uni_genes))  + '\n')
 
 cntdf_genes = cntdf.loc[genes].copy()
 
+###############################################################################
+# more functions
+
 def reduceGeneName(gene, uni_genes = uni_genes):
     rg = gene
     if gene.count('-') == 0:
@@ -298,6 +352,9 @@ def fixGeneLabels(xdf):
                     for umi in xdf.loc[idx,cell]:
                         xdf.loc[idx,cell][umi] = Counter([k.rsplit('-')[i] for k in xdf.loc[idx,cell][umi].elements()])
     return xdf
+
+###############################################################################
+# more main
 
 cntdf_genes['new_gene'] = [reduceGeneName(idx) for idx in cntdf_genes.index]
 cntdf_genes = fixGeneLabels(cntdf_genes)

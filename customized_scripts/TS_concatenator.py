@@ -102,9 +102,12 @@ readcount = 0
 reads_polyT = 0
 reads_targeted = 0
 reads_unclassified = 0
+
+print(fq1)
+
 with gzip.open(fq1) as f1, gzip.open(fq2) as f2: 
     for idx, (l1, l2) in enumerate(zip(f1, f2)):
-
+        
         # read current line from R1, R2
         l1, l2 = str(l1.rstrip().rsplit()[0], 'utf-8'), str(l2.rstrip().rsplit()[0], 'utf-8')
         l = np.mod(idx,4)
@@ -222,8 +225,8 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 continue
 
         # For testing purposes
-        if readcount >= 1000:
-            break
+        #if readcount >= 1000:
+        #    break
 
 nt = (idx+1)/4
 fout_R2_pT.close()

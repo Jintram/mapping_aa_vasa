@@ -63,8 +63,14 @@ for i, r in enumerate(bam.fetch(until_eof = True)):
             sys.exit()
             
             
-            
-            
+# is anything on different strand?            
+bam = pysam.AlignmentFile(bamfile)
+for i, r in enumerate(bam.fetch(until_eof = True)):
+    if r.is_reverse:
+        print('reverse?!')
+        sys.exit()
+    else:
+        print('normal')
             
             
             

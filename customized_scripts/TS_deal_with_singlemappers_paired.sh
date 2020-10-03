@@ -28,9 +28,13 @@ samtools view -h $inbam | awk 'BEGIN{OFS="\t"} {
 }' | samtools view -Sb > ${inbam%.bam}.singlemappers.bam
 
 bedtools bamtobed -i ${inbam%.bam}.singlemappers.bam | bedtools sort > ${inbam%.bam}.singlemappers.bed
+  # try local:
+  # p2b=/Users/m.wehrens/Software_custom/bedtools2/bin/
+  # $p2b/bedtools bamtobed -i ${inbam%.bam}.singlemappers.bam | $p2b/bedtools sort > ${inbam%.bam}.singlemappers.bed
 
 if [ $stranded == "y" ]
 then
+    # to run locally, add /Users/m.wehrens/Software_custom/bedtools2/bin/
     bedtools intersect -a ${inbam%.bam}.singlemappers.bed -b $refBED -wa -wb | awk 'BEGIN {OFS="\t"; w="T"} {
         chr=$1; readstart=$2; readend=$3; readname=$4; readstrand=$6; refstart=$8; refend=$9; refstrand=$10; refname=$11; genelen=$12; genestart=$13; geneend=$14;
         sx=match(readname, /;CG:/); rn=substr(readname, 0, sx-1); rq=substr(readname,sx+1,length(readname))
