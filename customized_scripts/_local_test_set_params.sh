@@ -69,7 +69,7 @@ inbam=${lib}_pT.nonRibo.fastq_E99_Aligned.out.bam
 ################################################################################
 # manual test on server
 
-lib=MW-TS-S1-Hybr-NB_HTMH2BGXF_S23
+lib=MW-TS-S1-Hybr-NB_HTMH2BGXF_S23_cat
 ref=HUMAN
 n=74
 out=XtestX

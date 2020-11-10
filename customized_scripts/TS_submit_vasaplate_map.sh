@@ -100,15 +100,15 @@ jtrim=$(echo $jtrim | awk '{print $NF}')
 jribo=3
 # map poly-T reads to ribo
 jobid=ribo-TS-${lib}
-jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem.sh $riboref ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem.sh $riboref ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
 jribo=$(echo $jribo | awk '{print $NF}')
 # map targeted reads to ribo
 jobid=ribo-pT-${lib}
-jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem_paired.sh $riboref ${lib}_pT_R1_cbc_trimmed_HATCG.fq.gz ${lib}_TS_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_homoATCG $p2bwa $p2samtools y $p2s")
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem_paired.sh $riboref ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s")
 jribo=$(echo $jribo | awk '{print $NF}')
 # map unclassified reads to ribo
 jobid=ribo-nc-${lib}
-jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem.sh $riboref ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
+jribo=$(sbatch --export=All -c 1 -N 8 -J $jobid -o ${jobid}.err -t 10:00:00 --mem=40G --dependency=afterany:$jtrim --wrap="${p2s}/TS_ribo-bwamem.sh $riboref ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s")
 jribo=$(echo $jribo | awk '{print $NF}')
   # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
   # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping

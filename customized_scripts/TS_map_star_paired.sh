@@ -24,6 +24,7 @@ outprefix=$6
 
 ${p2star}/STAR --runThreadN 8 --genomeDir ${genome} --readFilesIn ${inputfq1} ${inputfq2} --readFilesCommand zcat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
   # locally:
+  # gunzip ${inputfq1}.gz ${inputfq2}.gz
   # ${p2star}/star --genomeDir ${genome} --readFilesIn ${inputfq1} ${inputfq2} --readFilesCommand cat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
 
 rm -r ${outprefix}_STARtmp

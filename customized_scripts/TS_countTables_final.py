@@ -12,7 +12,14 @@ try:
     output = sys.argv[3]
     protocol = sys.argv[4]
 except:
-    sys.exit("Please, provide input bed with single mappers (1) bed with multimappers (2) output file (3) and protocol (4)")
+    sys.exit("Please, provide input bed with single mappers (1) bed with multimappers (2) output file (3) and protocol (4)\nOptionally, provide (5) single mappers R1 and (6) multi mappers R2")
+    
+if len(sys.argv)>4:
+    bedsingle_R1 = sys.argv[5] # bedsingle contains R2
+    bedmulti_R1 = sys.argv[6] # bedmulti contains R2
+    mate_file_given = True
+else:
+    mate_file_given = False
 
 ###############################################################################
 # Functions
@@ -67,7 +74,8 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
         # first acquire # mismatching bases
         nMs_string = [c.rsplit(';nM:')[1].rsplit(';jS:')[0] for c in infos]
         nMs_sum = [sum([int(i) for i in s.split('/')]) for s in nMs_string]
-            # in case of pairs, the entries look like 1/3, for respective reads.
+            # in case of pairs, the entries look like "1/3", with the slash
+            # separating respective reads.
             # this approach with sum can handle both single and paired reads.
         
         # convert different mappings to dataframes
@@ -79,6 +87,10 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
             'covs': [float(cov) for cov in covs],
             'tlens': [int(tl) for tl in tlens]
             })
+    
+        # I think the idea below is to create a gene dataframe, containing
+        # the mappings, from which mapping will be removed according to
+        # "the rules" for which mapping is most "correct"
     
         # select subset of genes that have minimal number of mismatches
         df = df[df['nMs']==df['nMs'].min()]
@@ -125,6 +137,9 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
                     labels[i] = 'intron'
             label = '-'.join(labels)
             
+            # based on the final gene dataframe (gdf), 
+            # a gene name has now been assigned
+            
         else:
             
             gene = ''; label = ''
@@ -135,52 +150,91 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
 ###############################################################################
 # main
     
+# handle mates if they're given
+if 
+
 # count reads and assign
 cnt = {}
 countLabels = set()
 #otc = open(output + '-check_assignments_singleMappers.txt', 'w')
+f_decisions = open(output+"_singlemapper_decisions.tsv", "w")
 with open(bedsingle) as f:
-    for i, line in enumerate(f):
+    for i, line in enumerate(f):    
+        
         ch, x0, x1, name, strand, gene, info, tlen, cov = line.rstrip().rsplit('\t')
+        
         if 'tRNA' in gene:
+            
             gene = gene.replace('-','.')
             gene = gene + '_tRNA'
+            
         if i == 0:
+            
             genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
             r0 = name
+            
         else:
+            
             if name != r0: 
+                
                 cell, umi = get_cell_UMI(r0, protocol)
                 label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
+                
 #                if len(df)>1: 
 #                    otc.write(r0)
 #                    otc.write(str(df))
 #                    otc.write('\n' + label + ' '+ xgene)
 #                    otc.write('\n\n')
+                
                 if xgene != '': 
                     cnt = addReadCount(cnt, cell, xgene, umi, label)
                     countLabels.add(label)
+                    
+                # write mapping to file, for later use in targeted sequencing analysis
+                # (bit redundant for single mappers, but easier for later workflow)                    
+                f_decisions.write(r0+'\t'+xgene+'\n')
+
+                    
                 # start again
                 genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
                 r0 = name
+                
             else: 
+                
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
 
+
 #otc.close()
+f_decisions.close()
 
 # again with multi-mappers
 #otc = open(output + '-check_assignments_multipleMappers.txt', 'w')
+f_decisions = open(output+"_multimapper_decisions.tsv", "w")
 with open(bedmulti) as f:
-    for i, line in enumerate(f):
+    for i, line in enumerate(f):        
+        
+        # the bed files will contain multiple lines for each of the mappings.
+        # to which read they belong can be identified by the read name
+        # so per name we collect the (multiple) mappings belonging to that name
+        
         ch, x0, x1, name, strand, gene, info, tlen, cov = line.rstrip().rsplit('\t')
+        
         if 'tRNA' in gene:
+            
             gene = gene.replace('-','.')
             gene = gene + '_tRNA'
+            
         if i == 0:
+            
             genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
-            r0 = name
+            r0 = name # r0 contains the name we're currently working on
+            
         else:
+            
+            # if entry relates to other name (ie read)
+            # handle currently collected entries
             if name != r0: 
+                                
                 cell, umi = get_cell_UMI(r0, protocol)
                 label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
 #                if len(df) > 1:
@@ -188,15 +242,24 @@ with open(bedmulti) as f:
 #                    otc.write(str(df))
 #                    otc.write('\n' + label + ' '+ xgene)
 #                    otc.write('\n\n')
+                
+                # write decision to file, for later use in targeted sequencing analysis
+                f_decisions.write(r0+'\t'+xgene+'\n')
+                
                 if xgene != '':
                     cnt = addReadCount(cnt, cell, xgene, umi, label)
                     countLabels.add(label)
+                    
                 # start again
                 genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
                 r0 = name
+                
             else: 
+                
+                # otherwise just keep collecting entries 
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
 #otc.close()
+f_decisions.close()
 
 ###############################################################################
 # more functions

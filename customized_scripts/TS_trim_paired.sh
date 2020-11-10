@@ -15,6 +15,7 @@ cutoff=10 # cutoff length to remove reads
 ${path2trimgalore}/trim_galore --paired --path_to_cutadapt ${path2cutadapt}/cutadapt ${file2trim}_R1_cbc.fastq.gz ${file2trim}_R2_cbc.fastq.gz --length $cutoff --retain_unpaired
 mv ${file2trim}_R1_cbc.fastq.gz_trimming_report.txt ${file2trim}_R1_trimming_report.txt
 mv ${file2trim}_R2_cbc.fastq.gz_trimming_report.txt ${file2trim}_R2_trimming_report.txt 
+  # ISSUE WITH READ REMOVAL (TODO)
   # Note1: "For adapter trimming, Trim Galore! uses the first 13 bp of Illumina 
   # standard adapters ('AGATCGGAAGAGC') by default (suitable for both ends of 
   # paired-end libraries), but accepts other adapter sequence, too"

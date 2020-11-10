@@ -28,40 +28,25 @@ p2s=$7
 
 # mapping short reads
 ${p2bwa}/bwa aln ${ref} ${fq} > aln_${fq%.f*q}.sai 
-${p2bwa}/bwa samse  ${ref}  aln_${fq%.f*q}.sai ${fq} | ${p2samtools}/samtools view -Sb  > ${out}.aln-ribo.bam &
-  # locally:
-  #${p2bwa}/bwa samse  ${ref}  aln_${fq%.f*q}.sai ${fq} > aln-temp.out 
-  #${p2samtools}/samtools view -Sb aln-temp.out  > ${out}.aln-ribo.bam 
-  #rm aln-temp.out # i don't know why, but locally it only worked with creating an intermediate file
+${p2bwa}/bwa samse  ${ref}  aln_${fq%.f*q}.sai ${fq} > aln-temp.out 
+${p2samtools}/samtools view -Sb aln-temp.out  > ${out}.aln-ribo.bam 
+rm aln-temp.out # i don't know why, but locally it only worked with creating an intermediate file
 
 # mapping normal reads
-# ${p2bwa}/bwa mem -t 8 -h 15 ${ref} ${fq} | ${p2samtools}/samtools view -Sb > ${out}.mem-ribo.bam & 
-# ${p2bwa}/bwa mem -h 15 ${ref} ${fq} | ${p2samtools}/samtools view -Sb > ${out}.mem-ribo.bam &
-${p2bwa}/bwa mem -t 8 -h 15 ${ref} ${fq} | ${p2samtools}/samtools view -Sb > ${out}.mem-ribo.bam &
-  # locally:
-  #${p2bwa}/bwa mem -t 8 -h 15 ${ref} ${fq} > mem-temp.out
-  #${p2samtools}/samtools view -Sb mem-temp.out > ${out}.mem-ribo.bam 
-  #rm mem-temp.out
-#
+${p2bwa}/bwa mem -t 8 -h 15 ${ref} ${fq} > mem-temp.out
+${p2samtools}/samtools view -Sb mem-temp.out > ${out}.mem-ribo.bam 
+rm mem-temp.out
 
-wait
+${p2samtools}/samtools merge -f -n -r -h ${out}.aln-ribo.bam ${out}.all-ribo.bam ${out}.aln-ribo.bam ${out}.mem-ribo.bam 
+${p2samtools}/samtools view -H ${out}.aln-ribo.bam
 
-${p2samtools}/samtools merge -n -r -h ${out}.aln-ribo.bam --threads 8 ${out}.all-ribo.bam ${out}.aln-ribo.bam ${out}.mem-ribo.bam 
-  # for local test: 
-  # ${p2samtools}/samtools merge -f -n -r -h ${out}.aln-ribo.bam ${out}.all-ribo.bam ${out}.aln-ribo.bam ${out}.mem-ribo.bam 
-  # ${p2samtools}/samtools view -H ${out}.aln-ribo.bam
 rm ${out}.aln-ribo.bam ${out}.mem-ribo.bam aln_${fq%.f*q}.sai
-${p2samtools}/samtools sort -n --threads 8 ${out}.all-ribo.bam -O BAM -o ${out}.nsorted.all-ribo.bam
-  # local test:
-  # ${p2samtools}/samtools sort -n -O bam -T temp_${out} -o ${out}.nsorted.all-ribo.bam ${out}.all-ribo.bam
-  # threads option removed, and added the mandatory -T
+
+${p2samtools}/samtools sort -n -O bam -T temp_${out} -o ${out}.nsorted.all-ribo.bam ${out}.all-ribo.bam
 rm ${out}.all-ribo.bam
 
-${p2s}/TS_riboread-selection.py ${out}.nsorted.all-ribo.bam $stranded ${out}
-# run locally:
-  # pythonbin=/Users/m.wehrens/anaconda3/bin/python
-  # $pythonbin ${p2s}/TS_riboread-selection.py ${out}.nsorted.all-ribo.bam $stranded ${out}
-  # (need correct python version)
+pythonbin=/Users/m.wehrens/anaconda3/bin/python
+$pythonbin ${p2s}/TS_riboread-selection.py ${out}.nsorted.all-ribo.bam $stranded ${out}
 
 exit
 
