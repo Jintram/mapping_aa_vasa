@@ -51,6 +51,54 @@ def get_cell_UMI(name, protocol = 'vasa'):
     return cell, umi
 
 
+def gene_assignment_single(genes, labels, infos, covs, tlens):
+    if len(set(genes)) == 1 and len(set(labels)) == 1:
+        gene = genes[0]; label = labels[0]; df = pd.DataFrame()
+    elif len(set(genes)) == 1 and len(set(labels)) > 1:
+        gene = genes[0]; label = 'intron'; df = pd.DataFrame()
+    else:
+        df = pd.DataFrame({'genes': genes, 
+            'labels': labels,
+            'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
+            'nMs': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
+            'jSs':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
+            'covs': [float(cov) for cov in covs],
+            'tlens': [int(tl) for tl in tlens]
+            })
+        df = df[df['nMs']==df['nMs'].min()]
+        gdf = {g: df_g for g, df_g in df.groupby('genes') if '_TEC' not in g}
+        for g in gdf:
+            if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jSs'])) == 1:
+                gdf[g] = gdf[g].head(1)
+        if len(gdf) > 1 and all([gdf[g].shape[0]==1 for g in gdf]):
+            if len(set(df['labels'])) > 1: 
+                fdf = df[df['labels']!='intron']
+                gdf = {g: df_g for g, df_g in fdf.groupby('genes') if '_TEC' not in g}
+        xg = []
+        for g in gdf:
+#            if (gdf[g].shape[0] > 1 and 'N' not in gdf[g]['cigars'].iloc[0]) or (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
+            if  (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
+                xg.append(g)
+        for g in xg:
+            del gdf[g]
+        if len(gdf) > 1: 
+            setjSs = set(pd.concat([gdf[g] for g in gdf])['jSs']); xg = []
+            if len(setjSs) > 1 and 'IN' in setjSs: 
+                xg = [g for g in gdf if 'IN' not in gdf[g]['jSs'].values and 'N' not in gdf[g]['cigars'].iloc[0]]
+            for g in xg:
+                del gdf[g]
+        if len(gdf) >= 1:
+            gene = '-'.join(sorted(gdf))
+            labels = ['']*len(gdf)
+            for i, g in enumerate(sorted(gdf)):
+                if len(set(gdf[g]['labels'])) == 1:
+                    labels[i] = gdf[g]['labels'].iloc[0]
+                else: 
+                    labels[i] = 'intron'
+            label = '-'.join(labels)
+        else:
+            gene = ''; label = ''
+    return label, gene, df
 
 def gene_assignment_single_usepairinfo_experimental(genes, labels, infos, covs, tlens, bothmates=0):
     # jS indicates whether the read completely falls inside the feature
@@ -279,7 +327,7 @@ with open(bedsingle) as f:
                 # break 
                 
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates)
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
                 
 #                if len(df)>1: 
 #                    otc.write(r0)
@@ -340,7 +388,7 @@ with open(bedmulti) as f:
             if name != r0: 
                                 
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates)
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
 #                if len(df) > 1:
 #                    otc.write(r0)
 #                    otc.write(str(df))
@@ -362,6 +410,7 @@ with open(bedmulti) as f:
                 
                 # otherwise just keep collecting entries 
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
+                            
 #otc.close()
 f_decisions.close()
 
