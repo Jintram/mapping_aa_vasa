@@ -50,43 +50,117 @@ def get_cell_UMI(name, protocol = 'vasa'):
         umi = 'A'
     return cell, umi
 
-
+# function to apply selection rules to decide on a per-read basis what 
+# mapping is most likely to be correct
+# 
+# written by a.alemany, comments by m.wehrens
 def gene_assignment_single(genes, labels, infos, covs, tlens):
+    
+    # if there's only one gene, we're done, take that one
     if len(set(genes)) == 1 and len(set(labels)) == 1:
         gene = genes[0]; label = labels[0]; df = pd.DataFrame()
+        
+    # same, but if both intron/exon features, take intron as type
     elif len(set(genes)) == 1 and len(set(labels)) > 1:
         gene = genes[0]; label = 'intron'; df = pd.DataFrame()
+        
+    # if there's multiple genes in the features that are overlapping, start 
+    # collecting info into dataframe (df) with all features
     else:
-        df = pd.DataFrame({'genes': genes, 
-            'labels': labels,
-            'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
-            'nMs': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
-            'jSs':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
-            'covs': [float(cov) for cov in covs],
-            'tlens': [int(tl) for tl in tlens]
-            })
-        df = df[df['nMs']==df['nMs'].min()]
+        # get the df (anna's version)
+        #df = pd.DataFrame({'genes': genes, 
+        #    'labels': labels,
+        #    'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
+        #    'nM': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
+        #    'jS':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
+        #    'covs': [float(cov) for cov in covs],
+        #    'tlens': [int(tl) for tl in tlens]
+        #    })
+
+        # get the df (updated from above)
+        # not sure what's best performance-wise, but this is more robust
+        # for the order of the items, and also allows easy renaming
+        # of multiple possible names to one (C2 should become cigar string)
+        # labels = exon or intron
+        # nM = number of mismatches (for paired read: total)
+        # jS = type of overlap w/ feature, IN means totally inside, OUT
+        #       means crossing both boundaries, 3 and 5 that respective 
+        #       boundary was crossed
+        # cov = coverage? (not used for decision)
+        # tlen = refend-refstart, so total feature length (not used for decision) 
+        # XM = from which mate (read 1, read 2) this read originates
+        temp_list = np.transpose([[x.split(':') for x in entry.split(';')] for entry in infos])
+        df = pd.DataFrame({temp_list[0][i][0]: temp_list[1][i] for i in range(len(temp_list[1]))})
+        df['genes'] = genes
+        df['labels'] = labels
+        df['covs'] = covs
+        df['tlens'] = tlens
+        df.rename(columns={'C2':'cigars','CG':'cigars'},inplace=True)
+        
+        # for now, let's ignore read 1
+        df = df.iloc[df['XM'].values=='2',]
+        
+        # === first selection ===
+        # only take along features that have the minimum amount of mismatches
+        df = df[df['nM']==df['nM'].min()]
+        
+        # create a list where each entry corresponds to a gene, and 
+        # holds the features that were overlapping belonging to that gene
+        # (remove TEC genes)
         gdf = {g: df_g for g, df_g in df.groupby('genes') if '_TEC' not in g}
+
+        # Merge multiple features into one if they all have the same properties
+        # I think this is for rare cases, e.g. where the read is mapped to 
+        # a repetetive sequence feature, where all mappings fall within the
+        # same feature (or within features that share that name, like 
+        # variant alleles)
         for g in gdf:
-            if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jSs'])) == 1:
+            if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jS'])) == 1:
                 gdf[g] = gdf[g].head(1)
+                
+        # === selection ===
+        # if there's still multiple genes, and all genes only have same type
+        # of overlap with the features, select non-intronic hits
         if len(gdf) > 1 and all([gdf[g].shape[0]==1 for g in gdf]):
             if len(set(df['labels'])) > 1: 
                 fdf = df[df['labels']!='intron']
                 gdf = {g: df_g for g, df_g in fdf.groupby('genes') if '_TEC' not in g}
-        xg = []
+                
+        # === selection ===
+        # if a read hits a single feature, but has a gap in the cigar
+        # it gets removed
+        xg = [] # blacklist
         for g in gdf:
-#            if (gdf[g].shape[0] > 1 and 'N' not in gdf[g]['cigars'].iloc[0]) or (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
+            # if (gdf[g].shape[0] > 1 and 'N' not in gdf[g]['cigars'].iloc[0]) or (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
             if  (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
-                xg.append(g)
+                xg.append(g)                
+        # remove 'm
         for g in xg:
             del gdf[g]
+            
+        # === selection === 
+        # remove the multi-feature genes that don't also have a gap in their alignment
+        # (if a read covers an exon-exon junction, one expects both that there's 
+        # non-overlap with the exon features due the junction, and also
+        # that the read has a gap in the alignment)
+        # if a read 
+        # only perform this selection if also single-hit features are 
+        # observed among the hits for different genes
         if len(gdf) > 1: 
-            setjSs = set(pd.concat([gdf[g] for g in gdf])['jSs']); xg = []
+            # all feature-overlap types for all genes
+            setjSs = set(pd.concat([gdf[g] for g in gdf])['jS']); xg = []
+            # if there's more overlap types, and IN present
             if len(setjSs) > 1 and 'IN' in setjSs: 
-                xg = [g for g in gdf if 'IN' not in gdf[g]['jSs'].values and 'N' not in gdf[g]['cigars'].iloc[0]]
+                # mark for deletion genes that are multi-feature and 
+                # don't show a gap ("N" in cigar)
+                xg = [g for g in gdf if 'IN' not in gdf[g]['jS'].values and 'N' not in gdf[g]['cigars'].iloc[0]]
+            # delete 'm
             for g in xg:
                 del gdf[g]
+                
+        # === end: generate gene name ===
+        # now simply paste together all gene names of all remaining genes
+        # (might be only one)
         if len(gdf) >= 1:
             gene = '-'.join(sorted(gdf))
             labels = ['']*len(gdf)
@@ -96,8 +170,12 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
                 else: 
                     labels[i] = 'intron'
             label = '-'.join(labels)
+            
+        # if no genes are remaining, return empty name
         else:
             gene = ''; label = ''
+            
+            
     return label, gene, df
 
 def gene_assignment_single_usepairinfo_experimental(genes, labels, infos, covs, tlens, bothmates=0):
