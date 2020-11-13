@@ -16,6 +16,8 @@ Created on Tue Oct 20 13:26:36 2020
 # STAR outputs nM and NM, from the manual (v 2.7.3a, p.11):
 # nM : is the number of mismatches per (paired) alignment, not to be confused with NM, which is
 # the number of mismatches in each mate.
+# nM is more general though, Anna uses nM also, so we'll stick to exporting
+# a parameter called "nM".
 # 
 # I read somewhere that STAR might also output a combined CIGAR string, 
 # but that doesn't seem to be the case here. So I'll just combine 
@@ -57,7 +59,7 @@ try:
 except:
     sys.exit("Please, give .sam in and outputfiles (single and multimappers) respectively\nOptionally, give two suffixes in order to split reads 1 and 2")
     
-if len(sys.argv)>=4:
+if len(sys.argv)>=5:
     [R1_suffix, R2_suffix] = sys.argv[4].split(';')
 else:
     [R1_suffix, R2_suffix] = ['','']
@@ -241,16 +243,16 @@ while (True):
         # to put R1 and R2 in their respective files
         if (NH==1):
             #print('writing single-mapper')
-            f_out_smap[i1].write(line1_split[0]+';nM:'+nM+';C1:'+CG[0]+';C2:'+CG[1]+'\t'+'\t'.join(line1_split[1:]))
-            f_out_smap[i2].write(line2_split[0]+';nM:'+nM+';C1:'+CG[0]+';C2:'+CG[1]+'\t'+'\t'.join(line2_split[1:]))   
+            f_out_smap[i1].write(line1_split[0]+';C1:'+CG[0]+';C2:'+CG[1]+';nM:'+nM+'\t'+'\t'.join(line1_split[1:]))
+            f_out_smap[i2].write(line2_split[0]+';C1:'+CG[0]+';C2:'+CG[1]+';nM:'+nM+'\t'+'\t'.join(line2_split[1:]))   
             #print(line1_split[0])
             #print(line2_split[0])
             nr_singlemap += 1
             
         elif (NH>1):
             #print('writing multi-mapper')            
-            f_out_mmap[i1].write(line1_split[0]+';nM:'+nM+';C1:'+CG[0]+';C2:'+CG[1]+'\t'+'\t'.join(line1_split[1:]))
-            f_out_mmap[i2].write(line2_split[0]+';nM:'+nM+';C1:'+CG[0]+';C2:'+CG[1]+'\t'+'\t'.join(line2_split[1:]))
+            f_out_mmap[i1].write(line1_split[0]+';C1:'+CG[0]+';C2:'+CG[1]+';nM:'+nM+'\t'+'\t'.join(line1_split[1:]))
+            f_out_mmap[i2].write(line2_split[0]+';C1:'+CG[0]+';C2:'+CG[1]+';nM:'+nM+'\t'+'\t'.join(line2_split[1:]))
             #print(line1_split[0])
             #print(line2_split[0])
             nr_multimap += 1
@@ -261,17 +263,17 @@ while (True):
     
     else:
         
-        NM = [substr for substr in line1_split if re.match('NM:i:', substr)][0][5:]
-        # print(str(NM))
+        nM = [substr for substr in line1_split if re.match('nM:i:', substr)][0][5:]
+        # print(str(nM))
         
         # print('Single end read found.')
         
         # Now export the single read to output file
         if (NH==1):
-            f_out_smap[0].write(line1_split[0]+';NM:'+NM+';CG:'+CG[0]+CG[1]+'\t'+'\t'.join(line1_split[1:])) # note: if single read, one of CG will be ''
+            f_out_smap[0].write(line1_split[0]+';CG:'+CG[0]+CG[1]+';nM:'+nM+'\t'+'\t'.join(line1_split[1:])) # note: if single read, one of CG will be ''
             nr_singlemap += 1
         elif (NH>1):
-            f_out_mmap[0].write(line1_split[0]+';NM:'+NM+';CG:'+CG[0]+CG[1]+'\t'+'\t'.join(line1_split[1:]))
+            f_out_mmap[0].write(line1_split[0]+';CG:'+CG[0]+CG[1]+';nM:'+nM+'\t'+'\t'.join(line1_split[1:]))
             nr_multimap += 1
         else:
             sys.exit('Unexpected NH value.')

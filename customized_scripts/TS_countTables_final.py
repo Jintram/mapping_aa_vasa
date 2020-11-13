@@ -12,14 +12,12 @@ try:
     output = sys.argv[3]
     protocol = sys.argv[4]
 except:
-    sys.exit("Please, provide input bed with single mappers (1) bed with multimappers (2) output file (3) and protocol (4)\nOptionally, provide (5) single mappers R1 and (6) multi mappers R2")
-    
-if len(sys.argv)>4:
-    bedsingle_R1 = sys.argv[5] # bedsingle contains R2
-    bedmulti_R1 = sys.argv[6] # bedmulti contains R2
-    mate_file_given = True
+    sys.exit("Please, provide input bed with single mappers (1) bed with multimappers (2) output file (3) and protocol (4);\noptionally, indicate whether both reads are present (1)")
+
+if len(sys.argv)>5:
+    bothmates = sys.argv[5]
 else:
-    mate_file_given = False
+    bothmates = False
 
 ###############################################################################
 # Functions
@@ -52,16 +50,18 @@ def get_cell_UMI(name, protocol = 'vasa'):
         umi = 'A'
     return cell, umi
 
-def gene_assignment_single(genes, labels, infos, covs, tlens):
-    # Note that jS is a customized flag that signals how the mapping 
-    # relates to intron/exon/gene boundaries [I guess --> check Anna -- mw]
+
+
+def gene_assignment_single_usepairinfo_experimental(genes, labels, infos, covs, tlens, bothmates=0):
+    # jS indicates whether the read completely falls inside the feature
     
     # if mapped to only one gene, it's simple
     if len(set(genes)) == 1 and len(set(labels)) == 1:
         
         gene = genes[0]; label = labels[0]; df = pd.DataFrame()
         
-    # idem, chose intron label if >1 labels though
+    # idem, chose intron label if >1 labels though (because we don't want to
+    # pretend its exonic when part is intronic)
     elif len(set(genes)) == 1 and len(set(labels)) > 1:
         
         gene = genes[0]; label = 'intron'; df = pd.DataFrame()
@@ -69,77 +69,172 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
     # now if mapped >1 gene, then .. 
     else:
         
-        # sys.exit() # debug purposes
-        
-        # first acquire # mismatching bases
-        nMs_string = [c.rsplit(';nM:')[1].rsplit(';jS:')[0] for c in infos]
-        nMs_sum = [sum([int(i) for i in s.split('/')]) for s in nMs_string]
-            # in case of pairs, the entries look like "1/3", with the slash
-            # separating respective reads.
-            # this approach with sum can handle both single and paired reads.
+        # debug purposes
+        #print('K bye now'); sys.exit() 
+              
+        # adapted code to handle cigars from two reads
+        # (the reason each read doesn't carry only its own cigar is a technical one)
+
+        if bothmates:
+            whichreads = [c.rsplit(';XM:')[1] for c in infos]
+            # cigar string specific for this read
+            cigars = \
+                [infos[i].rsplit('C'+whichreads[i]+':')[1].rsplit(';')[0] for i in range(len(infos))]
+            # cigar string combined for both mates
+            cigars_combined = \
+                [infos[i].rsplit('C1:')[1].rsplit(';')[0]+'_'+infos[i].rsplit('C2:')[1].rsplit(';')[0] for i in range(len(infos))]
+        else:
+            cigars = [c.rsplit('CG:')[1].rsplit(';')[0] for c in infos]
         
         # convert different mappings to dataframes
         df = pd.DataFrame({'genes': genes, 
             'labels': labels,
-            'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
-            'nMs': nMs_sum, # [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
-            'jSs':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
+                # exon or intron
+            'cigars': cigars,
+                # cigar strings
+            'nMs':  [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
+                # number of mismatches
+            'jSs':  [c.rsplit(';jS:')[1].rsplit(';XM:')[0] if ';jS:' in c else 'unknown' for c in infos],
+                # type of overlap with feature
             'covs': [float(cov) for cov in covs],
+                # coverage???
             'tlens': [int(tl) for tl in tlens]
+                # tlen = refend-refstart, so total feature length
             })
-    
-        # I think the idea below is to create a gene dataframe, containing
+        # also add mate-specific information
+        if bothmates:
+            #df['whichread'] = whichreads
+            df['isread1'] = [s=='1' for s in whichreads]
+            df['isread2'] = [s=='2' for s in whichreads]
+            df['cigars_combined'] = cigars_combined
+        else:
+            # TODO: we're assuming reads are from R2 here if "bothmates"
+            # isn't set. This information is only used to convey
+            # the reads are from the same end, so in a hypothetical mapping
+            # with only reads from R1, script wouldn't fail.
+            df['isread1'] = False
+            df['isread2'] = True
+            #df['cigars_combined'] = cigars # should be same anyways if not bothmates
+            
+        # The idea below is to create a gene dataframe, containing
         # the mappings, from which mapping will be removed according to
-        # "the rules" for which mapping is most "correct"
+        # "the rules" for which the mapping is most likely "correct"
     
+        # === rule ===
         # select subset of genes that have minimal number of mismatches
+        # (as determined by STAR during alingment, splice aware (I assume))
         df = df[df['nMs']==df['nMs'].min()]
+        # remove TEC genes from multi-choices
         gdf = {g: df_g for g, df_g in df.groupby('genes') if '_TEC' not in g}
         
-        # merge entries of same genes with same information
+        # === Additional RULE by MW ===
+        # remove genes for which both mates are not mapping to it (if that information is available)
+        if bothmates:
+            tokeep = [g for g in gdf if any(gdf[g]['isread1'].values) and any(gdf[g]['isread2'].values)]
+            gdf={g:gdf[g] for g in tokeep}
+        
+        # "merge" entries of same genes with same information
         for g in gdf:
             
+            # if all entries are equivalent, reduce dataframe to 1 row
             if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jSs'])) == 1:
                 gdf[g] = gdf[g].head(1)
+                if bothmates:
+                    gdf[g]['cigars'] = gdf[g]['cigars_combined']
+                    gdf[g]['isread1'] = True
+                    gdf[g]['isread2'] = True
                 
-        # if multiple labels remove intron reads [I guess]
+        # === Rule for non-intron preference ===
+        # if for all genes 1 row is left in their respective dfs  
+        # then collect non-intronic reads; 
+        # (allowing easy comparison between the genes)
+        # (note: above jSs criterium makes sure either all reads fall IN their features,
+        # or none do, for both cases selecting non-intron is desired.)
         if len(gdf) > 1 and all([gdf[g].shape[0]==1 for g in gdf]):
             if len(set(df['labels'])) > 1: 
+                # collect non-intronic reads; 
                 fdf = df[df['labels']!='intron'] 
                 gdf = {g: df_g for g, df_g in fdf.groupby('genes') if '_TEC' not in g}
-                
+
+        # Next up are some rules that need to be applied to read1 set and read2 
+        # set separately, let's create parameter that allows that subset selection
+        # (might be faster to create two new dfs? not sure.)
+        # (note this now also is an additional step even if bothmates not set, decreases speed..)
+        # removed this --> easier if I'd use an "isread1" and "isread2" parameter earlier
+        #ind_mate1 = {g: ['1' in entry for entry in gdf[g]['whichread'].values] for g in gdf}        
+        #ind_mate2 = {g: ['2' in entry for entry in gdf[g]['whichread'].values] for g in gdf}
+
+        # === Rule to remove "simple hits" with gaps ===                
+        # Now go over the potential genes again
+        # For the "simplified" genes (1-row), collect them in
+        # marked-for-deletion df if they have alignment gap
+        # (note that 'N' stands for alignment gap in cigar)
+        # (note that no gene will be "simplified" if it hit multiple features of one gene
+        # simply because it will not be entirely IN all features, so jSs not all equal.)
         xg = []
-        
-        #
-        # note that 'N' stands for alignment gap in cigar
         for g in gdf:
 #            if (gdf[g].shape[0] > 1 and 'N' not in gdf[g]['cigars'].iloc[0]) or (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
-            if  (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]):
+            # if  (gdf[g].shape[0] == 1 and 'N' in gdf[g]['cigars'].iloc[0]): # MW updated this line
+            # filter out reads that have a gap, but ±don't hit multiple features (put simplified)
+            # note that mw update addresses behavior for paired end mapping since it
+            # (a) takes correct cigar and (b) correctly identifies one-feature-hitting reads
+            if  (gdf[g].iloc[gdf[g].isread2.values,].shape[0] == 1 and 'N' in gdf[g].iloc[gdf[g].isread2.values,]['cigars'].iloc[0] \
+                 or \
+                 gdf[g].iloc[gdf[g].isread1.values,].shape[0] == 1 and 'N' in gdf[g].iloc[gdf[g].isread1.values,]['cigars'].iloc[0]): # MW updated this line            
                 xg.append(g)
                 
+        # delete the genes marked for deletion
         for g in xg:
             del gdf[g]
             
+        # === Rule exon-junction/map-gap consistency ===                   
+        # now if there's more than one gene left
         if len(gdf) > 1: 
-            setjSs = set(pd.concat([gdf[g] for g in gdf])['jSs']); xg = []
+            # collect the jS annotations over all genes
+            setjSs = set(pd.concat([gdf[g].iloc[gdf[g].isread2.values,] for g in gdf])['jSs'])
+            setjSs1 = set(pd.concat([gdf[g].iloc[gdf[g].isread1.values,] for g in gdf])['jSs'])            
+            # re-init blacklist
+            xg = []
+            # if there's hits that are fully within one feature ("IN") (and also non-IN hits are present)
             if len(setjSs) > 1 and 'IN' in setjSs: 
-                xg = [g for g in gdf if 'IN' not in gdf[g]['jSs'].values and 'N' not in gdf[g]['cigars'].iloc[0]]
+                # remove the multi-feature genes that don't also have a gap in their alignment
+                # (if a read covers an exon-exon junction, one expects both that there's 
+                # non-overlap with the exon features due the junction, and also
+                # that the read has a gap in the alignment)
+                # (This assumes a true read won't read through an intron to hit two exons.)
+                # MW: proposed update to use shape, because IN can't be there if shape>1    
+                # ---> no "'IN' not in xx" can be related single feature that partially overlaps
+                # read, whilst shape=1 --> so this shouldn't be criterium
+                xg = [g for g in gdf if 'IN' not in gdf[g].iloc[gdf[g].isread2.values,]['jSs'].values and 'N' not in gdf[g].iloc[gdf[g].isread2.values,]['cigars'].iloc[0]]
+                #xg = [g for g in gdf if gdf[g].iloc[ind_mate2[g],].shape[0]>1 and 'N' not in gdf[g].iloc[ind_mate2[g],]['cigars'].iloc[0]]
+            # now repeat process for mate 1 reads
+            if len(setjSs1) > 1 and 'IN' in setjSs1: 
+                xg = [g for g in gdf if 'IN' not in gdf[g].iloc[gdf[g].isread1.values,]['jSs'].values and 'N' not in gdf[g].iloc[gdf[g].isread1.values,]['cigars'].iloc[0]]
+                        # note that cigar might be empty if the read got simplified
+                #xg = [g for g in gdf if gdf[g].iloc[ind_mate1[g],].shape[0]>1 and 'N' not in gdf[g].iloc[ind_mate1[g],]['cigars'].iloc[0]]
+            # note that this failed for paired reads if sets of to-be-removed
+            # genes will be each others inverse for the two mate sets; this 
+            # seems highly unlikely however and in this case the mapping will be
+            # removed, which seems OK
             for g in xg:
                 del gdf[g]
-                
+
+        # now create the final output
+        # all genes that are still in here, are just merged
         if len(gdf) >= 1:
             gene = '-'.join(sorted(gdf))
-            labels = ['']*len(gdf)
+            newlabels = ['']*len(gdf)
             for i, g in enumerate(sorted(gdf)):
                 if len(set(gdf[g]['labels'])) == 1:
-                    labels[i] = gdf[g]['labels'].iloc[0]
+                    newlabels[i] = gdf[g]['labels'].iloc[0]
                 else: 
-                    labels[i] = 'intron'
-            label = '-'.join(labels)
+                    newlabels[i] = 'intron'
+            label = '-'.join(newlabels)
             
             # based on the final gene dataframe (gdf), 
             # a gene name has now been assigned
             
+        # if no genes are left, return empty
         else:
             
             gene = ''; label = ''
@@ -149,18 +244,20 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
 
 ###############################################################################
 # main
-    
-# handle mates if they're given
-if 
+
+# For debug purposes
+# f=open(bedsingle)
+# line=f.readline()
 
 # count reads and assign
 cnt = {}
 countLabels = set()
+skippedLast = False
 #otc = open(output + '-check_assignments_singleMappers.txt', 'w')
 f_decisions = open(output+"_singlemapper_decisions.tsv", "w")
 with open(bedsingle) as f:
     for i, line in enumerate(f):    
-        
+                
         ch, x0, x1, name, strand, gene, info, tlen, cov = line.rstrip().rsplit('\t')
         
         if 'tRNA' in gene:
@@ -170,15 +267,19 @@ with open(bedsingle) as f:
             
         if i == 0:
             
-            genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
+            genes = ["_".join(gene.rsplit("_")[:-1])]; 
+            labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
             r0 = name
             
         else:
             
             if name != r0: 
                 
+                # debug
+                # break 
+                
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates)
                 
 #                if len(df)>1: 
 #                    otc.write(r0)
@@ -194,6 +295,9 @@ with open(bedsingle) as f:
                 # (bit redundant for single mappers, but easier for later workflow)                    
                 f_decisions.write(r0+'\t'+xgene+'\n')
 
+                # debug feature
+                #if 'DYNC1LI2' in xgene:
+                #    break
                     
                 # start again
                 genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
@@ -236,7 +340,7 @@ with open(bedmulti) as f:
             if name != r0: 
                                 
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates)
 #                if len(df) > 1:
 #                    otc.write(r0)
 #                    otc.write(str(df))
