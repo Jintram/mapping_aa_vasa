@@ -151,8 +151,8 @@ while (True):
     
     # now determine if these are paired reads, assuming 1st read is representative
     line1_split = line1.split('\t') # use the flag for this
-    FLAG1 = line1_split[1]
-    if (bin(int(FLAG1))[-1]=='1'):
+    FLAG1 = int(line1_split[1])
+    if (bin(FLAG1)[-1]=='1'):
         paired = True
         #print('paired-end')
     else:
@@ -160,7 +160,7 @@ while (True):
         #print('single-end')
 
     # If self unmapped or mate unmapped, let's just skip this one
-    if (bin(int(FLAG1))[-3]=='1') or (bin(int(FLAG1))[-4]=='1'):
+    if (format(FLAG1, '#05b')[-3]=='1') or (paired and format(FLAG1, '#06b')[-4]=='1'):
         nr_unmapped += 1
         if paired:
               line2 = f.readline() # might as well skip its mate also
@@ -188,7 +188,7 @@ while (True):
 
     # Now identify which read is which
     if paired:
-        if (bin(int(FLAG1))[-7]=='1'):
+        if (format(FLAG1, '#09b')[-7]=='1'):
             i1=0; i2=1
         else:
             i1=1; i2=0
@@ -279,15 +279,18 @@ while (True):
             sys.exit('Unexpected NH value.')
             break
     
-    if not (line1_split[0] == line2_split[0]):
-        print('major error')
-        break
-    # REMOVE
-    HI1 = [substr for substr in line1_split if re.match('HI:i:', substr)][0][5:]
-    HI2 = [substr for substr in line2_split if re.match('HI:i:', substr)][0][5:]
-    if not (HI1 == HI2):
-        print('major error: HI didnt match')
-        break
+    # debuggin stuff, can be removed
+    if paired:
+        if not (line1_split[0] == line2_split[0]):
+            print('major error')
+            break
+        # REMOVE
+        HI1 = [substr for substr in line1_split if re.match('HI:i:', substr)][0][5:]
+        HI2 = [substr for substr in line2_split if re.match('HI:i:', substr)][0][5:]
+        if not (HI1 == HI2):
+            print('major error: HI didnt match')
+            break
+    # end of debuggin stuff
 
 
 f.close()

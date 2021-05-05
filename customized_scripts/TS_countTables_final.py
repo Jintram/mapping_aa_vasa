@@ -6,6 +6,8 @@ import pandas as pd
 from collections import Counter
 import pickle
 
+PRINTFLAG=True
+
 try:
     bedsingle = sys.argv[1]
     bedmulti = sys.argv[2]
@@ -18,6 +20,9 @@ if len(sys.argv)>5:
     bothmates = sys.argv[5]
 else:
     bothmates = False
+
+if PRINTFLAG:
+    print("Creating count table for "+bedsingle)
 
 ###############################################################################
 # Functions

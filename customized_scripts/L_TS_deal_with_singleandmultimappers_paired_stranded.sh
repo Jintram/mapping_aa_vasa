@@ -2,11 +2,11 @@
 
 if [ $# -ne 4 ]
 then
-    echo "Please, give:"
+    echo "To L_TS_deal_with_singleandmultimappers_paired_stranded.sh, please, give:"
     echo "1) input bam file"
     echo "2) bed file for introns, exons and tRNA"
-    echo "3) stranded protocol (n/y)"
-    echo "4) paired (n/y)"
+    echo "3) stranded protocol (y/n)"
+    echo "4) paired data (y/n)"
     exit
 fi
 
@@ -19,6 +19,8 @@ paired=$4
 # For local use, we also need to give path
 # On server, probably "bedtools ..." will work as command
 p2b=/Users/m.wehrens/Software_custom/bedtools2/bin/
+pythonbin=/Users/m.wehrens/anaconda3/bin/python
+p2s=/Users/m.wehrens/Documents/git_repos/mapping_aa_private_vasa/customized_scripts
 
 ################################################################################
 # Outline of this script
@@ -34,22 +36,30 @@ p2b=/Users/m.wehrens/Software_custom/bedtools2/bin/
 # (1) Extract cigar and nM (mismatches) parameter (add it to name entry)
 # Updated version of adding extra info by MW in python
 
-samtools view -h -f 2 -o ${inbam%.bam}.f2.sam $inbam
+if [ $paired == 'y' ]
+then
+  samtools view -h -f 2 -o ${inbam%.bam}.f2.sam $inbam
+  f2_str='.f2'
   # Important!: the "-f 2" option removes singletons from the mapping;
   # these can occur because STAR will map one mate only if other mate's length
   # is <1/3 that one.
   # See also: https://groups.google.com/g/rna-star/c/K8yVdkTlWoY
-  
+else
+  # if not paired, don't use "-f 2" option 
+  samtools view -h -o ${inbam%.bam}.sam $inbam
+  f2_str=''
+fi
+
 # The following python code can split R1 and R2 into separate files, or 
 # just throw everything in one file
 # Split in two files:
 # $pythonbin ${p2s}/TS_mw_extract_cigar_nM.py ${inbam%.bam}.f2.sam ${inbam%.bam}.f2.singlemappers.sam ${inbam%.bam}.f2.multimappers.sam '.R1;.R2'
 # Everything in one file
-$pythonbin ${p2s}/TS_mw_extract_cigar_nM.py ${inbam%.bam}.f2.sam ${inbam%.bam}.f2.singlemappers.sam ${inbam%.bam}.f2.multimappers.sam
+$pythonbin ${p2s}/TS_mw_extract_cigar_nM.py ${inbam%.bam}${f2_str}.sam ${inbam%.bam}${f2_str}.singlemappers.sam ${inbam%.bam}${f2_str}.multimappers.sam
 
 # Convert back to bam
-samtools view -S -b -o ${inbam%.bam}.f2.singlemappers.bam ${inbam%.bam}.f2.singlemappers.sam 
-samtools view -S -b -o ${inbam%.bam}.f2.multimappers.bam ${inbam%.bam}.f2.multimappers.sam
+samtools view -S -b -o ${inbam%.bam}${f2_str}.singlemappers.bam ${inbam%.bam}${f2_str}.singlemappers.sam 
+samtools view -S -b -o ${inbam%.bam}${f2_str}.multimappers.bam ${inbam%.bam}${f2_str}.multimappers.sam
 
 ################################################################################
 # Previous version by Anna (didn't deal with paired end information)
@@ -80,8 +90,8 @@ samtools view -S -b -o ${inbam%.bam}.f2.multimappers.bam ${inbam%.bam}.f2.multim
 #$p2b/bedtools bamtobed -i ${inbam%.bam}.f2.multimappers.bam | $p2b/bedtools sort > ${inbam%.bam}.f2.multimappers.bed
 
 # Strategy II: sorted by pairs:
-$p2b/bedtools bamtobed -i ${inbam%.bam}.f2.singlemappers.bam > ${inbam%.bam}.f2.singlemappers.bed
-$p2b/bedtools bamtobed -i ${inbam%.bam}.f2.multimappers.bam > ${inbam%.bam}.f2.multimappers.bed
+$p2b/bedtools bamtobed -i ${inbam%.bam}${f2_str}.singlemappers.bam > ${inbam%.bam}${f2_str}.singlemappers.bed
+$p2b/bedtools bamtobed -i ${inbam%.bam}${f2_str}.multimappers.bam > ${inbam%.bam}${f2_str}.multimappers.bed
 
 # Strategy III: What exactly does pairtobed do?
 # $p2b/pairToBed -bedpe -abam ${inbam%.bam}.f2.singlemappers.bam -b $refBED > ${inbam%.bam}.f2.singlemappers.pair.bed # | $p2b/bedtools sort > ${inbam%.bam}.singlemappers.bed
@@ -112,8 +122,8 @@ $p2b/bedtools bamtobed -i ${inbam%.bam}.f2.multimappers.bam > ${inbam%.bam}.f2.m
 
 
 # what happens if we do this for the paired bed file? # See here XXX!!!!!!!
-$p2b/bedtools intersect -a ${inbam%.bam}.f2.singlemappers.bed -b $refBED -wa -wb > ${inbam%.bam}.f2.singlemappers.intersect.bed
-$p2b/bedtools intersect -a ${inbam%.bam}.f2.multimappers.bed -b $refBED -wa -wb > ${inbam%.bam}.f2.multimappers.intersect.bed
+$p2b/bedtools intersect -a ${inbam%.bam}${f2_str}.singlemappers.bed -b $refBED -wa -wb > ${inbam%.bam}${f2_str}.singlemappers.intersect.bed
+$p2b/bedtools intersect -a ${inbam%.bam}${f2_str}.multimappers.bed -b $refBED -wa -wb > ${inbam%.bam}${f2_str}.multimappers.intersect.bed
   # output will be (multiple) features, sorted by feature overlap of the reads
   # mates are labeled by /1 and /2 at the end of the read name
   # note that IGV doesn't have the comprehensive set of genes,
@@ -178,6 +188,7 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
         }
     }'
     
+    
 #awk_command_singlemappers_part2_R2='    
 #    # only look at feature when annotation is on same strand as mapped read
 #    if (readstrand==refstrand) {'
@@ -193,10 +204,10 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
 # This is processed further using awk, and then other scripts.
   #cat ${inbam%.bam}.f2.singlemappers.intersect.bed | awk $awk_command_singlemappers > ${inbam%.bam}.singlemappers_genes.bed
 
-cat ${inbam%.bam}.f2.singlemappers.intersect.bed | awk $awk_command_singlemappers > ${inbam%.bam}.singlemappers_genes.bed
-sort -k4 ${inbam%.bam}.singlemappers_genes.bed > ${inbam%.bam}.nsorted.singlemappers_genes.bed # is this necessary?
-cat ${inbam%.bam}.f2.multimappers.intersect.bed | awk $awk_command_singlemappers > ${inbam%.bam}.multimappers_genes.bed
-sort -k4 ${inbam%.bam}.multimappers_genes.bed > ${inbam%.bam}.nsorted.multimappers_genes.bed # is this necessary?
+cat ${inbam%.bam}${f2_str}.singlemappers.intersect.bed | awk "${awk_command_singlemappers}" > ${inbam%.bam}.singlemappers_genes.bed
+sort -k4 ${inbam%.bam}.singlemappers_genes.bed > ${inbam%.bam}.nsorted.singlemappers_genes.bed 
+cat ${inbam%.bam}${f2_str}.multimappers.intersect.bed | awk "${awk_command_singlemappers}" > ${inbam%.bam}.multimappers_genes.bed
+sort -k4 ${inbam%.bam}.multimappers_genes.bed > ${inbam%.bam}.nsorted.multimappers_genes.bed 
   # note that the python script to process these reads is completely dependent on reads
   # being sorted by name, if not, reads will be double counted
 
@@ -213,13 +224,13 @@ sort -k4 ${inbam%.bam}.multimappers_genes.bed > ${inbam%.bam}.nsorted.multimappe
 #sort -k4 ${inbam%.bam}.R2.multimappers_genes.bed > ${inbam%.bam}.R2.nsorted.multimappers_genes.bed
 
 # some tests (note that numbers will also depend on # features within a gene that happen to overlap)
-grep "_MYBPC3_" ${inbam%.bam}.R1.multimappers_genes.bed | wc -l
+#grep "_MYBPC3_" ${inbam%.bam}.R1.multimappers_genes.bed | wc -l
 # 0
-grep "_MYBPC3_" ${inbam%.bam}.R2.multimappers_genes.bed | wc -l
+#grep "_MYBPC3_" ${inbam%.bam}.R2.multimappers_genes.bed | wc -l
 # 6
-grep "_MYBPC3_" ${inbam%.bam}.R1.singlemappers_genes.bed | wc -l
+#grep "_MYBPC3_" ${inbam%.bam}.R1.singlemappers_genes.bed | wc -l
 # 127
-grep "_MYBPC3_" ${inbam%.bam}.R2.singlemappers_genes.bed | wc -l
+#grep "_MYBPC3_" ${inbam%.bam}.R2.singlemappers_genes.bed | wc -l
 # 188
 # So why the discrepancy? For singlemappers, probably because 
 # R2 is longer read and thus has more features..
@@ -227,13 +238,13 @@ grep "_MYBPC3_" ${inbam%.bam}.R2.singlemappers_genes.bed | wc -l
 # by an R1 MYBPC3.
 
 # For GAPDH, it seems reasonably consistent
-grep "_GAPDH_" ${inbam%.bam}.R1.multimappers_genes.bed | wc -l
+#grep "_GAPDH_" ${inbam%.bam}.R1.multimappers_genes.bed | wc -l
 # 35
-grep "_GAPDH_" ${inbam%.bam}.R2.multimappers_genes.bed | wc -l
+#grep "_GAPDH_" ${inbam%.bam}.R2.multimappers_genes.bed | wc -l
 # 37
-grep "_GAPDH_" ${inbam%.bam}.R1.singlemappers_genes.bed | wc -l
+#grep "_GAPDH_" ${inbam%.bam}.R1.singlemappers_genes.bed | wc -l
 # 2014
-grep "_GAPDH_" ${inbam%.bam}.R2.singlemappers_genes.bed | wc -l
+#grep "_GAPDH_" ${inbam%.bam}.R2.singlemappers_genes.bed | wc -l
 # 2032
 
 

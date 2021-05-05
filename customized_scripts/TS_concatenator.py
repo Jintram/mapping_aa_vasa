@@ -30,6 +30,14 @@ def find_compatible_barcodes(barcode, HDmax = 0):
                 compatible_barcodes.add(s0)
     return list(compatible_barcodes)
     
+def is_polyT_hamming1(sequence):    
+    return 'T'*(len(sequence)-1) in [sequence[:X]+sequence[(X+1):len(sequence)] for X in range(0,len(sequence))]
+
+def is_polyT_hamming1_l10(sequence):  
+    # hard coded for speed, assuming len(sequence) == 10
+    # note this will result in unreported wrong behavior if len(sequence) != 10
+    return 'TTTTTTTTT' in [sequence[:X]+sequence[(X+1):10] for X in range(0,10)]
+
 
 #### check input variables ####
 parser = argp.ArgumentParser(description = 'Concatenates bcread to bioread qname.')
@@ -167,7 +175,7 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                 reads_targeted += 1
             # classify as poly-T when 20 Ts found (primer has 26, but not sure reliable poly-read); 26=TTTTTTTTTTTTTTTTTTTTTTTTTT
             # poly-T sequences will be removed later by trim galore / cutadapt
-            elif (seq_at_primer_pos[0:10] == 'TTTTTTTTTT'):                 
+            elif (is_polyT_hamming1_l10(seq_at_primer_pos[0:10])):                 
                 classification = "polyT"
                 reads_polyT += 1
                 # print("Classified as poly-T read.")                
