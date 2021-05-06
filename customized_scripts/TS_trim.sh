@@ -2,13 +2,24 @@
 
 if [ $# -ne 3 ]
 then
-    echo "Please, give (1) input fastq file; (2) path2trimgalore; (3) path2cutadapt;"
+    #echo "Please, give (1) input fastq file; (2) path2trimgalore; (3) path2cutadapt;"    
+    echo "Please, give (1) general param file, (2) run param file, (3) file to trim"    
   exit
 fi
 
-file2trim=$1
-path2trimgalore=$2
-path2cutadapt=$3
+#file2trim=$1
+#path2trimgalore=$2
+#path2cutadapt=$3
+
+general_parameter_filepath=$1
+run_parameter_filepath=$2
+file2trim=$3
+
+source $general_parameter_filepath
+source $run_parameter_filepath
+current_dir=$(pwd)
+echo "Going to $outdir"
+cd $outdir
 
 # trim adaptors
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt ${file2trim}_cbc.fastq.gz
@@ -30,7 +41,7 @@ ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt -a G
 mv ${file2trim}_cbc_trimmed_HATC_trimmed.fq.gz ${file2trim}_cbc_trimmed_HATCG.fq.gz
 rm ${file2trim}_cbc_trimmed_HATC.fq.gz
 
-
+cd $current_dir
 
 
 
