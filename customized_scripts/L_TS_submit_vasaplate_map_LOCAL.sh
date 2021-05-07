@@ -104,19 +104,25 @@ if [ "$step" = "2" ] || [ "$step" = "all" ]; then
 fi
 
 if [ "$step" = "3" ] || [ "$step" = "all" ]; then
-    ### ribo-map
-    # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
-    # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping
-    # 
-    # map poly-T reads to ribo
-    ${p2s}/L_TS_ribo-bwamem.sh $riboref ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s    
-    # map unclassified reads to ribo
-    ${p2s}/L_TS_ribo-bwamem.sh $riboref ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG $p2bwa $p2samtools y $p2s
-    # map targeted reads to ribo
-    if [ $TS = '1' ]; then
-      ${p2s}/L_TS_ribo-bwamem_paired.sh $riboref ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s
-    fi
-      
+
+      echo "Mapping to ribosomal RNA. (More relevant for VASA.)"
+  
+      ### ribo-map
+      # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
+      # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping
+      # 
+      # map poly-T reads to ribo
+      ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG 
+      # map unclassified reads to ribo
+      ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG 
+      # map targeted reads to ribo
+      if [ $TS = '1' ]; then
+        ${p2s}/L_TS_ribo-bwamem_paired.sh ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s
+      fi
+    
+fi      
+  
+if [[ "$step" = "4" || "$step" = "all" ]]; then      
     ### map to genome 
     # For the poly-T data (single)
     ${p2s}/L_TS_map_star.sh ${p2star} ${p2samtools} ${genome} ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
@@ -127,7 +133,9 @@ if [ "$step" = "3" ] || [ "$step" = "all" ]; then
       ${p2s}/L_TS_map_star_paired.sh ${p2star} ${p2samtools} ${genome} ${lib}_TS_cbc_val_HATCG_R1.nonRibo.fastq ${lib}_TS_cbc_val_HATCG_R2.nonRibo.fastq ${lib}_TS.nonRibo_E99_
         # note: locally, .gz is removed from input file names
     fi
+fi
 
+if [[ "$step" = "5" || "$step" = "all" ]]; then      
     ### map locations to genes (accounting for ambiguities)
       # note that there can be ambiguities in where stuff needs to be mapped
       # mostly due to overlapping annotation for whatever reason or

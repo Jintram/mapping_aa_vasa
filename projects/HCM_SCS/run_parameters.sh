@@ -2,13 +2,12 @@
 
 echo "Setting (server) run parameters"
 
-step="2"
+step="3"
 
 outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping
 
 # read length (for MOUSE: 59, 74, 96, 246; for HUMAN: 74, 136)
 n=74 
-echo "To do: Check read length n!"
 
 # human genome
 riboref=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/unique_rRNA_human.fa
@@ -25,3 +24,5 @@ protocol="celseq2"
 
 # Whether we should look for targeted reads
 TS=0
+
+stranded=y
