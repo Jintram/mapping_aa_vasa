@@ -3,7 +3,7 @@
 # 
 echo "Setting (local) run parameters"
 
-step="3"
+step="4"
 
 outdir=/Volumes/workdrive_m.wehrens_hubrecht/Fastq__raw_files/HCM_SCS/testrun/mapping/
 
@@ -27,3 +27,4 @@ protocol="celseq2"
 TS=0
 
 stranded=y
+paired=0

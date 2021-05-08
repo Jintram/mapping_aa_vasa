@@ -1,26 +1,31 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]
+if [ $# -ne 3 ]
 then
-    echo "To L_TS_deal_with_singleandmultimappers_paired_stranded.sh, please, give:"
-    echo "1) input bam file"
-    echo "2) bed file for introns, exons and tRNA"
-    echo "3) stranded protocol (y/n)"
-    echo "4) paired data (y/n)"
+    #echo "To L_TS_deal_with_singleandmultimappers_paired_stranded.sh, please, give:"
+    #echo "1) input bam file"
+    #echo "2) bed file for introns, exons and tRNA"
+    #echo "3) stranded protocol (y/n)"
+    #echo "4) paired data (y/n)"
+    echo "Please, give (1) general param file, (2) run param file, (3) input bam file"    
     exit
 fi
 
-inbam=$1
-refBED=$2
-stranded=$3
-paired=$4
+
+
 #refBED=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/Mus_musculus.GRCm38.99.homemade_IntronExonTrna.bed
 
-# For local use, we also need to give path
-# On server, probably "bedtools ..." will work as command
-p2b=/Users/m.wehrens/Software_custom/bedtools2/bin/
-pythonbin=/Users/m.wehrens/anaconda3/bin/python
-p2s=/Users/m.wehrens/Documents/git_repos/mapping_aa_private_vasa/customized_scripts
+################################################################################
+
+general_parameter_filepath=$1
+run_parameter_filepath=$2
+inbam=$3
+
+source $general_parameter_filepath
+source $run_parameter_filepath
+current_dir=$(pwd)
+echo "Going to $outdir"
+cd $outdir
 
 ################################################################################
 # Outline of this script
@@ -38,7 +43,7 @@ p2s=/Users/m.wehrens/Documents/git_repos/mapping_aa_private_vasa/customized_scri
 
 if [ $paired == 'y' ]
 then
-  samtools view -h -f 2 -o ${inbam%.bam}.f2.sam $inbam
+  ${p2samtools}/samtools view -h -f 2 -o ${inbam%.bam}.f2.sam $inbam
   f2_str='.f2'
   # Important!: the "-f 2" option removes singletons from the mapping;
   # these can occur because STAR will map one mate only if other mate's length
@@ -46,7 +51,7 @@ then
   # See also: https://groups.google.com/g/rna-star/c/K8yVdkTlWoY
 else
   # if not paired, don't use "-f 2" option 
-  samtools view -h -o ${inbam%.bam}.sam $inbam
+  ${p2samtools}/samtools view -h -o ${inbam%.bam}.sam $inbam
   f2_str=''
 fi
 
@@ -58,8 +63,8 @@ fi
 $pythonbin ${p2s}/TS_mw_extract_cigar_nM.py ${inbam%.bam}${f2_str}.sam ${inbam%.bam}${f2_str}.singlemappers.sam ${inbam%.bam}${f2_str}.multimappers.sam
 
 # Convert back to bam
-samtools view -S -b -o ${inbam%.bam}${f2_str}.singlemappers.bam ${inbam%.bam}${f2_str}.singlemappers.sam 
-samtools view -S -b -o ${inbam%.bam}${f2_str}.multimappers.bam ${inbam%.bam}${f2_str}.multimappers.sam
+${p2samtools}/samtools view -S -b -o ${inbam%.bam}${f2_str}.singlemappers.bam ${inbam%.bam}${f2_str}.singlemappers.sam 
+${p2samtools}/samtools view -S -b -o ${inbam%.bam}${f2_str}.multimappers.bam ${inbam%.bam}${f2_str}.multimappers.sam
 
 ################################################################################
 # Previous version by Anna (didn't deal with paired end information)

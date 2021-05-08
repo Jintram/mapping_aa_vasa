@@ -32,6 +32,7 @@ then
 fi
 
 echo "Running script on ${lib} library"
+echo "Running step $step"
 
 # Load parameters from paths
 # general
@@ -125,12 +126,12 @@ fi
 if [[ "$step" = "4" || "$step" = "all" ]]; then      
     ### map to genome 
     # For the poly-T data (single)
-    ${p2s}/L_TS_map_star.sh ${p2star} ${p2samtools} ${genome} ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
+    ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
     # Then for the unclassified data (single)
-    ${p2s}/L_TS_map_star.sh ${p2star} ${p2samtools} ${genome} ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
+    ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
     # For the paired TS data:
     if [ $TS = '1' ]; then      
-      ${p2s}/L_TS_map_star_paired.sh ${p2star} ${p2samtools} ${genome} ${lib}_TS_cbc_val_HATCG_R1.nonRibo.fastq ${lib}_TS_cbc_val_HATCG_R2.nonRibo.fastq ${lib}_TS.nonRibo_E99_
+      ${p2s}/L_TS_map_star_paired.sh $general_parameter_filepath $run_parameter_filepath ${lib}_TS_cbc_val_HATCG_R1.nonRibo.fastq ${lib}_TS_cbc_val_HATCG_R2.nonRibo.fastq ${lib}_TS.nonRibo_E99_
         # note: locally, .gz is removed from input file names
     fi
 fi

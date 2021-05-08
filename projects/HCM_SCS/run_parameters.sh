@@ -2,7 +2,7 @@
 
 echo "Setting (server) run parameters"
 
-step="3"
+step="4"
 
 outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping
 
@@ -26,3 +26,4 @@ protocol="celseq2"
 TS=0
 
 stranded=y
+paired=0

@@ -14,9 +14,13 @@ path2trimgalore=$p2trimgalore
 p2cutadapt=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin
 path2cutadapt=$p2cutadapt
 
-p2bwa=/hpc/hub_oudenaarden/bin/software/bwa-0.7.10
-p2samtools=/hpc/hub_oudenaarden/bdebarbanson/bin/samtools-1.3.1/
-p2star=/hpc/hub_oudenaarden/aalemany/bin/STAR-2.7.3a/bin/Linux_x86_64/
+#p2bwa=/hpc/hub_oudenaarden/bin/software/bwa-0.7.10
+p2bwa=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin
+#p2samtools=/hpc/hub_oudenaarden/bdebarbanson/bin/samtools-1.3.1/
+p2samtools=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin
+
+#p2star=/hpc/hub_oudenaarden/aalemany/bin/STAR-2.7.3a/bin/Linux_x86_64/
+p2star=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin
 
 pythonbin=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin/python
 
