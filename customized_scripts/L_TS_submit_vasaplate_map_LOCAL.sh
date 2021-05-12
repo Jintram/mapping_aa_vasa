@@ -52,10 +52,10 @@ fi
 echo "sourcing $run_parameter_filepath"
 source $run_parameter_filepath
 
-if [ "$step" = "" ] || [ "$step" = "all" ]
+if [ "$step" = "" ] 
 then
-  echo "Step was not set, setting to all"
-  step="all"
+  echo "Step was not set, setting to default (full run)"
+  step="default"
 fi
 
 ### check existence of input fastq files
@@ -87,11 +87,11 @@ then
 fi
 
 ### extract cell barcodes (this will split the read files into 3 batches; poly-T, targeted and unclassified.)
-if [ "$step" = "1" ] || [ "$step" = "all" ]; then
+if [[ "${step}" == *"(1)"* || "${step}" == "default" ]]; then
     sh ${p2s}/L_TS_extractBC.sh $general_parameter_filepath $run_parameter_filepath vasaplate $lib
 fi
-  
-if [ "$step" = "2" ] || [ "$step" = "all" ]; then
+
+if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
     ### trim files
     # (no local version needed)
     # For polyT:
@@ -104,7 +104,7 @@ if [ "$step" = "2" ] || [ "$step" = "all" ]; then
     fi
 fi
 
-if [ "$step" = "3" ] || [ "$step" = "all" ]; then
+if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
 
       echo "Mapping to ribosomal RNA. (More relevant for VASA.)"
   
@@ -122,8 +122,8 @@ if [ "$step" = "3" ] || [ "$step" = "all" ]; then
       fi
     
 fi      
-  
-if [[ "$step" = "4" || "$step" = "all" ]]; then      
+    
+if [[ "${step}" == *"(4)"* || "${step}" == "default" ]]; then
     ### map to genome 
     # For the poly-T data (single)
     ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
@@ -136,7 +136,7 @@ if [[ "$step" = "4" || "$step" = "all" ]]; then
     fi
 fi
 
-if [[ "$step" = "5" || "$step" = "all" ]]; then      
+if [[ "${step}" == *"(5)"* || "${step}" == "default" ]]; then
     ### map locations to genes (accounting for ambiguities)
       # note that there can be ambiguities in where stuff needs to be mapped
       # mostly due to overlapping annotation for whatever reason or
@@ -146,23 +146,31 @@ if [[ "$step" = "5" || "$step" = "all" ]]; then
       # dealing with ambiguities in the assignment of locations to ref transcripts
     #
     # For pT subset
-    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh ${lib}_pT.nonRibo_E99_Aligned.out.bam ${refBED} y n
+    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_pT.nonRibo_E99_Aligned.out.bam n
     # For nc subset
-    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh ${lib}_nc.nonRibo_E99_Aligned.out.bam ${refBED} y n
+    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_nc.nonRibo_E99_Aligned.out.bam n
     # For TS subset
     if [ $TS = '1' ]; then
-      ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh ${lib}_TS.nonRibo_E99_Aligned.out.bam ${refBED} y y
+      ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_TS.nonRibo_E99_Aligned.out.bam y
     fi
+      
+fi
+
+if [[ "${step}" == *"(6)"* || "${step}" == "default" ]]; then
       
     ### count table    
     # For pT
-    $pythonbin ${p2s}/TS_countTables_final.py ${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${lib}_pT vasa
+    $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_pT vasa
     # For nc
-    $pythonbin ${p2s}/TS_countTables_final.py ${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${lib}_nc vasa
+    $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_nc vasa
     # For TS
     if [ $TS = '1' ]; then
-      $pythonbin ${p2s}/TS_countTables_final.py ${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${lib}_TS vasa 1
+      $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_TS vasa 1
     fi
+
+fi
+
+if [[ "${step}" == *"(7)"* ]]; then  
 
     ### TS specific post-processing, to get a database of mapped reads and their sequences
     # TS_countTables_final should output "decision" files also, which contains final mapping decisions for multimappers

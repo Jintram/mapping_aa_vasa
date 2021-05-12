@@ -1,13 +1,13 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]
+if [ $# -ne 4 ]
 then
     #echo "To L_TS_deal_with_singleandmultimappers_paired_stranded.sh, please, give:"
     #echo "1) input bam file"
     #echo "2) bed file for introns, exons and tRNA"
     #echo "3) stranded protocol (y/n)"
     #echo "4) paired data (y/n)"
-    echo "Please, give (1) general param file, (2) run param file, (3) input bam file"    
+    echo "Please, give (1) general param file, (2) run param file, (3) input bam file, (4) paired [y/n]"    
     exit
 fi
 
@@ -20,6 +20,7 @@ fi
 general_parameter_filepath=$1
 run_parameter_filepath=$2
 inbam=$3
+paired=$4
 
 source $general_parameter_filepath
 source $run_parameter_filepath

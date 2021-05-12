@@ -24,27 +24,33 @@ echo "Going to $outdir"
 cd $outdir
 
 # mapping short reads
+echo "mapping rRNA, short"
 ${p2bwa}/bwa aln ${riboref} ${fq} > aln_${fq%.f*q}.sai 
 ${p2bwa}/bwa samse  ${riboref}  aln_${fq%.f*q}.sai ${fq} > aln-temp.out 
 ${p2samtools}/samtools view -Sb aln-temp.out  > ${out}.aln-ribo.bam 
 rm aln-temp.out # i don't know why, but locally it only worked with creating an intermediate file
 
 # mapping normal reads
+echo "mapping rRNA, long"
 ${p2bwa}/bwa mem -t 8 -h 15 ${riboref} ${fq} > mem-temp.out
 ${p2samtools}/samtools view -Sb mem-temp.out > ${out}.mem-ribo.bam 
 rm mem-temp.out
 
+echo "merging two maps" 
 ${p2samtools}/samtools merge -f -n -r -h ${out}.aln-ribo.bam ${out}.all-ribo.bam ${out}.aln-ribo.bam ${out}.mem-ribo.bam 
 ${p2samtools}/samtools view -H ${out}.aln-ribo.bam
 
 rm ${out}.aln-ribo.bam ${out}.mem-ribo.bam aln_${fq%.f*q}.sai
 
+echo "sorting"
 ${p2samtools}/samtools sort -n -O bam -T temp_${out} -o ${out}.nsorted.all-ribo.bam ${out}.all-ribo.bam
 rm ${out}.all-ribo.bam
 
+echo "riboread selection"
 #pythonbin=/Users/m.wehrens/anaconda3/bin/python
 $pythonbin ${p2s}/TS_riboread-selection.py ${out}.nsorted.all-ribo.bam $stranded ${out}
 
+echo "end of script"
 exit
 
 #if [ $stranded == "n" ]

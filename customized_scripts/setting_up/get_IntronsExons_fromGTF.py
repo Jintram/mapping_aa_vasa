@@ -4,6 +4,10 @@ from pandas.io.parsers import read_csv
 import numpy as np
 import pandas as pd
 
+# debugging
+#gtffile = '/Volumes/workdrive_m.wehrens_hubrecht/reference_genomes/downloaded_ensembl/99/problemcase_Homo_sapiens.GRCh38.99.gtf'
+#output = '/Volumes/workdrive_m.wehrens_hubrecht/reference_genomes/downloaded_ensembl/99/problemCase.gtf.99_'
+
 try:
     gtffile = sys.argv[1]
     output = sys.argv[2]
@@ -84,6 +88,14 @@ for mdf in p.imap_unordered(findGeneExonIntron, [xdf[g] for g in xdf.keys()]):
 # remove rows where start > end (in the introns i find some)
 edf = edf[edf['start'] < edf['end']]
 idf = idf[idf['start'] < idf['end']]
+
+# MW addition, also export non-pooled dfs (see below for pooling)
+# sort by chrom and start
+edf = edf.sort_values(by=['chr', 'start'])
+udf = idf.sort_values(by=['chr', 'start'])
+# export
+idf.to_csv(output + '_mw_introns.bed', sep='\t', header=False, index=None)
+edf.to_csv(output + '_mw_exons.bed', sep='\t', header=False, index=None)
 
 # rep_idf = {i: df_i['gene_fullname'] for i, df_i in idf.groupby(['chr','start','end','strand']) if len(df_i)>1}
 # rep_edf = {e: df_e['gene_fullname'] for e, df_e in edf.groupby(['chr','start','end','strand']) if len(df_e)>1}

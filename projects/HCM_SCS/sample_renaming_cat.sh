@@ -1,0 +1,10 @@
+mv JE8_AHFL7NBGX5_S17_R2_cat.fastq.gz JE8_AHFL7NBGX5_S17_cat_R2.fastq.gz
+mv JE8_AHFL7NBGX5_S17_R1_cat.fastq.gz JE8_AHFL7NBGX5_S17_cat_R1.fastq.gz
+mv JE7_AHFL7NBGX5_S16_R2_cat.fastq.gz JE7_AHFL7NBGX5_S16_cat_R2.fastq.gz
+mv JE7_AHFL7NBGX5_S16_R1_cat.fastq.gz JE7_AHFL7NBGX5_S16_cat_R1.fastq.gz
+mv JE4_AHFL7NBGX5_S4_R2_cat.fastq.gz JE4_AHFL7NBGX5_S4_cat_R2.fastq.gz
+mv JE4_AHFL7NBGX5_S4_R1_cat.fastq.gz JE4_AHFL7NBGX5_S4_cat_R1.fastq.gz
+mv JE3_AHY3WGBGX3_S2_R2_cat.fastq.gz JE3_AHY3WGBGX3_S2_cat_R2.fastq.gz
+mv JE3_AHY3WGBGX3_S2_R1_cat.fastq.gz JE3_AHY3WGBGX3_S2_cat_R1.fastq.gz
+mv JE2_AHY3WGBGX3_S1_R2_cat.fastq.gz JE2_AHY3WGBGX3_S1_cat_R2.fastq.gz
+mv JE2_AHY3WGBGX3_S1_R1_cat.fastq.gz JE2_AHY3WGBGX3_S1_cat_R1.fastq.gz

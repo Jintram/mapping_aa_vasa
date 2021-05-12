@@ -44,8 +44,8 @@ python ${p2scripts}/setting_up/get_IntronsExons_fromGTF.py ${gtffile} ${output}
 # I'm guessing this should be possible using a few commands.
 
 # Create an additional field indicating exon or intron status, and merge into _ExonsIntrons file
-awk -F, '{$(NF+1)="exon";}1' OFS='\t' ${output}_exons.bed > ${output}_ExonsIntrons.bed
-awk -F, '{$(NF+1)="intron";}1' OFS='\t' ${output}_introns.bed >> ${output}_ExonsIntrons.bed
+awk -F, '{$(NF+1)="exon";}1' OFS='\t' ${output}_mw_exons.bed > ${output}_ExonsIntrons.bed
+awk -F, '{$(NF+1)="intron";}1' OFS='\t' ${output}_mw_introns.bed >> ${output}_ExonsIntrons.bed
 #cat ${output}_exons.bed ${output}_introns.bed > ${output}_ExonsIntrons.bed # Paste together the intron and exon files
 
 # Calculate gene length
@@ -55,11 +55,45 @@ awk 'BEGIN {OFS="\t"} { $(NF+1) = $3 - $2 } 1' ${output}_genes.bed > ${output}_g
 # echo "join requires sorted input"
 sort -k5 ${output}_ExonsIntrons.bed > ${output}_ExonsIntrons_sorted.bed
 sort -k5 ${output}_genesL.bed > ${output}_genesL_sorted.bed
-join -j 5 -o 1.1,1.2,1.3,1.4,1.5,1.6,2.2,2.3,2.6 ${output}_ExonsIntrons_sorted.bed ${output}_genesL_sorted.bed > ${output}_joined.bed
-
+join -t $'\t' -j 5 -o 1.1,1.2,1.3,1.4,1.5,1.6,2.6,2.2,2.3 ${output}_ExonsIntrons_sorted.bed ${output}_genesL_sorted.bed > ${output}_joined.bed
+  # DEBUG: check sorting of ENSG00000215790_SLC35E2A_ProteinCoding
+  
 # Sort the resulting file
-sort -n -k1,1 -k7,7 -k2,2 <  ${output}_joined.bed > ${output}_Final.bed
+sed 's/	/_/5' ${output}_joined.bed > ${output}_joined2.bed
+sort -k1,1 -k2,2n <  ${output}_joined2.bed > ${output}_Final.bed 
+
+# Remove intermediate files
+rm ${output}_genesL.bed
+rm ${output}_genesL_sorted.bed
+rm ${output}_exons.bed
+rm ${output}_introns.bed
 rm ${output}_ExonsIntrons.bed
+rm ${output}_ExonsIntrons_sorted.bed
+rm ${output}_joined2.bed
+rm ${output}_joined.bed
+
+#${output}_mw_exons.bed
+#${output}_mw_introns.bed
+#${output}_genes.bed
+
+# Let's check if consistent with Anna's file
+#annasversion=/Volumes/workdrive_m.wehrens_hubrecht/reference_genomes/ref_genome_anna/Homosapines_ensemble99.homemade_IntronExonTrna.bed
+#sort -k1,1 -k2,2n $annasversion > anna_sorted.bed 
+#diff ${output}_Final.bed anna_sorted.bed > diff.txt
+#diff ${output}_Final.bed $annasversion > diff.txt
+
+
+
+################################################################################
+# Some older debugging stuff
+
+#rm XXXSTUFFXXX
+#output=homeMade_IntronsExons__Homo_sapiens.GRCh38.99_
+#annasversion=/Volumes/workdrive_m.wehrens_hubrecht/reference_genomes/ref_genome_anna/Homosapines_ensemble99.homemade_IntronExonTrna.bed
+#diff ${output}_Final.bed $annasversion > diff.txt
+
+# There seem to be some differences, perhaps she used?
+#wget ftp://ftp.ensembl.org/pub/release-99/gtf/homo_sapiens/Homo_sapiens.GRCh38.99.chr_patch_hapl_scaff.gtf.gz
 
 ################################################################################
 

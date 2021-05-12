@@ -11,12 +11,9 @@ outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping
 n=74 
 
 # human genome
-#riboref=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/unique_rRNA_human.fa
-#genome=/hpc/hub_oudenaarden/group_references/ensembl/99/homo_sapiens/star_v273a_NOMASK_NOERCC_index_$n
-#refBED=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/Homosapines_ensemble99.homemade_IntronExonTrna.bed
-riboref=/hpc/hub_oudenaarden/mwehrens/ref/rRNA/unique_rRNA_human.fa
-genome=/hpc/hub_oudenaarden/mwehrens/ref/GRCh38.81/STAR-indexed-74
-refBED=/hpc/hub_oudenaarden/mwehrens/ref/GRCh38.81/homeMadeBed/homeMade_IntronsExons__Homo_sapiens.GRCh38.81__Final.bed
+riboref=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/unique_rRNA_human.fa
+genome=/hpc/hub_oudenaarden/group_references/ensembl/99/homo_sapiens/star_v273a_NOMASK_NOERCC_index_$n
+refBED=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/Homosapines_ensemble99.homemade_IntronExonTrna.bed
 
 # mouse genome
 #riboref=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/rRNA_mouse_Rn45S.fa
@@ -30,7 +27,4 @@ protocol="celseq2"
 TS=0
 
 stranded=y
-
-
-
-
+paired=0
