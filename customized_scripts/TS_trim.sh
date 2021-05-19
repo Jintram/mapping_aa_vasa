@@ -27,7 +27,8 @@ mv ${file2trim}_cbc.fastq.gz_trimming_report.txt ${file2trim}_trimming_report.tx
 
 # trim homopolymers 
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt -a AAAAAAAAAAAAAAAAAAAA --no_report_file ${file2trim}_cbc_trimmed.fq.gz
-mv ${file2trim}_cbc_trimmed_trimmed.fq.gz ${file2trim}_cbc_trimmed_HA.fq.gz
+mv ${file2trim}_cbc_trimmed_trimmed.fq.gz ${file2trim}_cbc_trimmed_HA.fq.gz # renaming output file
+rm ${file2trim}_cbc_trimmed.fq.gz # removal of input file
 
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt -a TTTTTTTTTTTTTTTTTTTT --no_report_file ${file2trim}_cbc_trimmed_HA.fq.gz
 mv ${file2trim}_cbc_trimmed_HA_trimmed.fq.gz ${file2trim}_cbc_trimmed_HAT.fq.gz
@@ -40,6 +41,12 @@ rm ${file2trim}_cbc_trimmed_HAT.fq.gz
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt -a GGGGGGGGGGGGGGGGGGGG --no_report_file ${file2trim}_cbc_trimmed_HATC.fq.gz
 mv ${file2trim}_cbc_trimmed_HATC_trimmed.fq.gz ${file2trim}_cbc_trimmed_HATCG.fq.gz
 rm ${file2trim}_cbc_trimmed_HATC.fq.gz
+
+# File cleanup
+if [[ $nocleanup = "" ]]; then
+  echo "cleaning up some files" # prevent this by setting "nocleanup"
+  rm ${file2trim}_cbc.fastq.gz
+fi
 
 cd $current_dir
 

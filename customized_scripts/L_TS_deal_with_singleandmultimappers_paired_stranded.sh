@@ -217,6 +217,27 @@ sort -k4 ${inbam%.bam}.multimappers_genes.bed > ${inbam%.bam}.nsorted.multimappe
   # note that the python script to process these reads is completely dependent on reads
   # being sorted by name, if not, reads will be double counted
 
+################################################################################
+
+if [[ $nocleanup = "" ]]; then
+  echo "cleaning up some files" # prevent this by setting "nocleanup"
+  
+  rm $inbam
+  rm ${inbam%.bam}${f2_str}.singlemappers.bam
+  rm ${inbam%.bam}${f2_str}.multimappers.bam
+  
+  rm ${inbam%.bam}${f2_str}.sam
+  rm ${inbam%.bam}${f2_str}.singlemappers.sam
+  rm ${inbam%.bam}${f2_str}.multimappers.sam
+fi
+
+################################################################################
+
+
+
+
+
+
 # OLD VERSION
 # First singlemappers  
 #cat ${inbam%.bam}.f2.singlemappers.R1.intersect.bed | awk $awk_command_singlemappers_R1 > ${inbam%.bam}.R1.singlemappers_genes.bed

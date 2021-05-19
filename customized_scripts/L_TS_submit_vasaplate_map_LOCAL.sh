@@ -89,19 +89,50 @@ fi
 ### extract cell barcodes (this will split the read files into 3 batches; poly-T, targeted and unclassified.)
 if [[ "${step}" == *"(1)"* || "${step}" == "default" ]]; then
     sh ${p2s}/L_TS_extractBC.sh $general_parameter_filepath $run_parameter_filepath vasaplate $lib
+    $exitcode = $?
+    
+    if [[ $exitcode -ne 0 ]]; then
+      echo "terminating because script didn't properly end."
+      exit 1
+    fi
+    
 fi
 
 if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
     ### trim files
     # (no local version needed)
-    # For polyT:
-    ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2
+    
+    # For polyT (if applicable):
+    if [[ -f "${outdir}/${lib}_pT_R2_cbc.fastq.gz" ]]; then
+      ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2
+      $exitcode = $?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "terminating because script didn't properly end."
+        exit 1
+      fi
+    fi
+    
     # For non-classified:
     ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2 
-    # For TS
+    $exitcode = $?
+    
+    if [[ $exitcode -ne 0 ]]; then
+      echo "terminating because script didn't properly end."
+      exit 1
+    fi
+    
+    # For TS (if applicable)
     if [ $TS = '1' ]; then
       ${p2s}/TS_trim_paired.sh $general_parameter_filepath $run_parameter_filepath ${lib}_TS 
+      $exitcode = $?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "terminating because script didn't properly end."
+        exit 1
+      fi
     fi
+  
 fi
 
 if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
@@ -111,11 +142,16 @@ if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
       ### ribo-map
       # this is done "in silico" remove ribosomal reads (should be filtered by wet lab protocol already, but not 100%)
       # not that ribo-bwamem script also removes the reads using riboread-selection.py after mapping
-      # 
-      # map poly-T reads to ribo
-      ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG 
+      #
+      
+      # map poly-T reads to ribo (only if pT file exists)
+      if [[ -f "${outdir}/${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz" ]]; then
+        ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG 
+      fi
+      
       # map unclassified reads to ribo
       ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG 
+      
       # map targeted reads to ribo
       if [ $TS = '1' ]; then
         ${p2s}/L_TS_ribo-bwamem_paired.sh ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s
@@ -126,7 +162,9 @@ fi
 if [[ "${step}" == *"(4)"* || "${step}" == "default" ]]; then
     ### map to genome 
     # For the poly-T data (single)
-    ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
+    if [[ -f "${outdir}/${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq.gz" ]]; then
+      ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
+    fi
     # Then for the unclassified data (single)
     ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
     # For the paired TS data:
@@ -146,7 +184,9 @@ if [[ "${step}" == *"(5)"* || "${step}" == "default" ]]; then
       # dealing with ambiguities in the assignment of locations to ref transcripts
     #
     # For pT subset
-    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_pT.nonRibo_E99_Aligned.out.bam n
+    if [[ -f "${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.bam" ]]; then
+      ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_pT.nonRibo_E99_Aligned.out.bam n
+    fi
     # For nc subset
     ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_nc.nonRibo_E99_Aligned.out.bam n
     # For TS subset
@@ -158,14 +198,64 @@ fi
 
 if [[ "${step}" == *"(6)"* || "${step}" == "default" ]]; then
       
-    ### count table    
+    echo "reminder: running w/ vasa option here .."
+      
+    ### count table   
+     
     # For pT
-    $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_pT vasa
+    
+    if [[ -f "${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed" ]]; then
+      $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_pT vasa
+      if [[ $nocleanup = "" ]]; then
+        echo "cleaning up some files" # prevent this by setting "nocleanup"
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers_genes.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+        
+      fi
+    fi
+    
     # For nc
+    
     $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_nc vasa
+    
+    if [[ $nocleanup = "" ]]; then
+      echo "cleaning up some files" # prevent this by setting "nocleanup"
+      
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers_genes.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+                         
+    fi
+    
     # For TS
     if [ $TS = '1' ]; then
+      
       $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_TS vasa 1
+      
+      if [[ $nocleanup = "" ]]; then
+        echo "cleaning up some files" # prevent this by setting "nocleanup"
+        
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers_genes.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+                           
+      fi
     fi
 
 fi

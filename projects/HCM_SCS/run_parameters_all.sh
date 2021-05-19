@@ -3,7 +3,7 @@
 echo "Setting (server) run parameters"
 
 # format for step: step="(1)(3)" etc or step="default", latter runs all default
-step="(1)(2)(3)(4)"
+step="default"
 
 outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping
 

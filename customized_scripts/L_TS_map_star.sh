@@ -27,10 +27,12 @@ echo "Going to $outdir"
 cd $outdir
 ################################################################################
 
-gunzip ${inputfq}.gz
-${p2star}/STAR --genomeDir ${genome} --readFilesIn ${inputfq} --readFilesCommand cat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
-#${p2star}/star --genomeDir ${genome} --readFilesIn ${inputfq} --readFilesCommand cat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
+# First unzipping (for local use)
 # zcat doesn't work for some reason on local mac
+#gunzip ${inputfq}.gz
+#${p2star}/STAR --genomeDir ${genome} --readFilesIn ${inputfq} --readFilesCommand cat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
+
+${p2star}/STAR --genomeDir ${genome} --readFilesIn ${inputfq}.gz --readFilesCommand zcat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
 
 rm -r ${outprefix}_STARtmp
 rm ${outprefix}Log.progress.out
@@ -40,5 +42,19 @@ mv ${outprefix}Log.final.out ${outprefix}Log.final.txt
 
 #${p2samtools}/samtools view -q 255 ${outprefix}Aligned.sortedByCoord.out.bam -b -o ${outprefix}Aligned.sortedByCoord.filtered.bam
 #rm ${outprefix}Aligned.sortedByCoord.out.bam
+
+################################################################################
+
+if [[ $nocleanup = "" ]]; then
+  echo "cleaning up some files" # prevent this by setting "nocleanup"
+  #rm ${inputfq}
+  rm ${inputfq}.gz
+fi
+
+################################################################################
+
+
+
+
 
 

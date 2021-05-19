@@ -50,6 +50,13 @@ echo "riboread selection"
 #pythonbin=/Users/m.wehrens/anaconda3/bin/python
 $pythonbin ${p2s}/TS_riboread-selection.py ${out}.nsorted.all-ribo.bam $stranded ${out}
 
+if [[ $nocleanup = "" ]]; then
+  echo "cleaning up some files" # prevent this by setting "nocleanup"
+  rm ${fq}
+  rm ${out}.nsorted.all-ribo.bam
+  rm ${out}.Ribo.bam
+fi
+
 echo "end of script"
 exit
 

@@ -52,6 +52,7 @@ parser.add_argument('--cbchd', help = 'collapse cell barcodes with the given ham
 parser.add_argument('--outdir', help = 'output directory for cbc.fastq.gz and log files', type = str, default = './')
 parser.add_argument('--TS', help = 'accomodate Targeted Sequencing (TS) protocol (default FALSE)', type = bool, default = False)
 parser.add_argument('--primerfile', '-pf', help = 'location of csv file with sequences of RT primers for targeted sequencing', type = str, default='targetedprimers.tsv')
+parser.add_argument('--TTTfilter', help = 'sort out reads without 10bp poly T seq', action = 'store_true')
 #parser.add_argument('--TTTfilter', help = 'filter non-poly-T reads out (default FALSE)', type = bool, default = True)
 args = parser.parse_args()
 
@@ -65,9 +66,9 @@ cbcfile = args.cbcfile
 hd = args.cbchd
 outdir = args.outdir
 TS = args.TS
+TTTfilter = args.TTTfilter
 if TS:
     primerfile = args.primerfile
-#TTTfilter = args.TTTfilter
 target_primer_len = 20
 
 # wdir = os.getcwd() # allows for easier interaction during testing
@@ -104,7 +105,8 @@ if not os.path.isdir(outdir):
 
 #### Read fastq files and assign cell barcode and UMI ####
 # For polyT
-fout_R2_pT = open(outdir + '/' + fqr + '_pT_R2_cbc.fastq', 'w')
+if TTTfilter:
+    fout_R2_pT = open(outdir + '/' + fqr + '_pT_R2_cbc.fastq', 'w')
 # For reads not classified
 fout_R2_nc = open(outdir + '/' + fqr + '_nc_R2_cbc.fastq', 'w')
 if TS:
@@ -185,24 +187,32 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                     reads_targeted += 1
                 # classify as poly-T when 20 Ts found (primer has 26, but not sure reliable poly-read); 26=TTTTTTTTTTTTTTTTTTTTTTTTTT
                 # poly-T sequences will be removed later by trim galore / cutadapt
-                elif (is_polyT_hamming1_l10(seq_at_primer_pos[0:10])):                 
-                    classification = "polyT"
-                    reads_polyT += 1
-                    # print("Classified as poly-T read.")                
                 else:
-                    reads_unclassified += 1
-                    # print("Read not classified")
-                    # print(s1)
+                    if TTTfilter:
+                        if (is_polyT_hamming1_l10(seq_at_primer_pos[0:10])):                 
+                            classification = "polyT"
+                            reads_polyT += 1
+                            # print("Classified as poly-T read.")                
+                        else:
+                            reads_unclassified += 1
+                            # print("Read not classified")
+                            # print(s1)
+                    else:
+                        reads_unclassified += 1 # in this case, all will be              
+                    
             # decision loop if not TS
             else:
-                if (is_polyT_hamming1_l10(seq_at_primer_pos[0:10])):                 
-                    classification = "polyT"
-                    reads_polyT += 1
-                    # print("Classified as poly-T read.")                
+                if TTTfilter:
+                    if (is_polyT_hamming1_l10(seq_at_primer_pos[0:10])):                 
+                        classification = "polyT"
+                        reads_polyT += 1
+                        # print("Classified as poly-T read.")                
+                    else:
+                        reads_unclassified += 1
+                        # print("Read not classified")
+                        # print(s1)
                 else:
-                    reads_unclassified += 1
-                    # print("Read not classified")
-                    # print(s1)
+                    reads_unclassified += 1 # in this case, all will be 
                 
             # determine BC + UMI
             if bcread == 'R1':
@@ -240,6 +250,7 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
                   
                 if (classification == 'polyT'):
                     fout_R2_pT.write( '\n'.join([name, s2, '+', q2, '']))
+                        # this output file will only be used when TTTfilter = True
                 elif (classification == 'targeted'):
                     name += ';p_seq:'+current_primer_seq # add primer seq to name
                     fout_R1_TS.write( '\n'.join([name, s1, '+', q1, '']))
@@ -257,7 +268,8 @@ with gzip.open(fq1) as f1, gzip.open(fq2) as f2:
         #    break
 
 nt = (idx+1)/4
-fout_R2_pT.close()
+if TTTfilter:
+    fout_R2_pT.close()
 fout_R2_nc.close()
 if TS:
     fout_R1_TS.close()
@@ -282,7 +294,8 @@ fout.write(', '.join(['reads with proper barcodes:', str(ns), str(1.0*ns/nt), '\
 fout.close()
 
 #### zip fastq file ####
-os.system('gzip '+ outdir + '/' + fqr + '_pT_R2_cbc.fastq')
+if TTTfilter:
+    os.system('gzip '+ outdir + '/' + fqr + '_pT_R2_cbc.fastq')
 os.system('gzip '+ outdir + '/' + fqr + '_nc_R2_cbc.fastq')
 if TS:
     os.system('gzip '+ outdir + '/' + fqr + '_TS_R1_cbc.fastq')

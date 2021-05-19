@@ -7,6 +7,7 @@ from collections import Counter
 import pickle
 
 PRINTFLAG=True
+DECISIONFLAG=False
 
 try:
     bedsingle = sys.argv[1]
@@ -385,7 +386,8 @@ cnt = {}
 countLabels = set()
 skippedLast = False
 #otc = open(output + '-check_assignments_singleMappers.txt', 'w')
-f_decisions = open(output+"_singlemapper_decisions.tsv", "w")
+if DECISIONFLAG:
+    f_decisions = open(output+"_singlemapper_decisions.tsv", "w")
 with open(bedsingle) as f:
     for i, line in enumerate(f):    
                 
@@ -424,7 +426,8 @@ with open(bedsingle) as f:
                     
                 # write mapping to file, for later use in targeted sequencing analysis
                 # (bit redundant for single mappers, but easier for later workflow)                    
-                f_decisions.write(r0+'\t'+xgene+'\n')
+                if DECISIONFLAG:
+                    f_decisions.write(r0+'\t'+xgene+'\n')
 
                 # debug feature
                 #if 'DYNC1LI2' in xgene:
@@ -440,11 +443,13 @@ with open(bedsingle) as f:
 
 
 #otc.close()
-f_decisions.close()
+if DECISIONFLAG:
+    f_decisions.close()
 
 # again with multi-mappers
 #otc = open(output + '-check_assignments_multipleMappers.txt', 'w')
-f_decisions = open(output+"_multimapper_decisions.tsv", "w")
+if DECISIONFLAG:
+    f_decisions = open(output+"_multimapper_decisions.tsv", "w")
 with open(bedmulti) as f:
     for i, line in enumerate(f):        
         
@@ -479,7 +484,8 @@ with open(bedmulti) as f:
 #                    otc.write('\n\n')
                 
                 # write decision to file, for later use in targeted sequencing analysis
-                f_decisions.write(r0+'\t'+xgene+'\n')
+                if DECISIONFLAG:
+                    f_decisions.write(r0+'\t'+xgene+'\n')
                 
                 if xgene != '':
                     cnt = addReadCount(cnt, cell, xgene, umi, label)
@@ -495,7 +501,8 @@ with open(bedmulti) as f:
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
                             
 #otc.close()
-f_decisions.close()
+if DECISIONFLAG:
+    f_decisions.close()
 
 ###############################################################################
 # more functions
