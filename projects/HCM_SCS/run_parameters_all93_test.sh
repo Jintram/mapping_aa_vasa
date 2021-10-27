@@ -5,9 +5,10 @@ echo "Setting (server) run parameters"
 # format for step: step="(1)(3)" etc or step="default", latter runs all default
 step="default"
 
-nocleanup=1
+#nocleanup=1
+#returntempfiles=1 # on HPC, copy tempfiles from $TMPDIR to $outdir
 
-outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping.93
+outdir=/hpc/hub_oudenaarden/mwehrens/fastq/HCM_SCS/mapping.93.may25
 
 # read length (for MOUSE: 59, 74, 96, 246; for HUMAN: 74, 136)
 n=74 

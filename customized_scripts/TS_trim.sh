@@ -17,9 +17,16 @@ file2trim=$3
 
 source $general_parameter_filepath
 source $run_parameter_filepath
+
 current_dir=$(pwd)
-echo "Going to $outdir"
-cd $outdir
+
+if [[ $TMPDIR == "" ]]; then
+  echo "Going to $outdir"
+  cd $outdir
+else
+  echo "Going to $TMPDIR"
+  cd $TMPDIR
+fi
 
 # trim adaptors
 ${path2trimgalore}/trim_galore --path_to_cutadapt ${path2cutadapt}/cutadapt ${file2trim}_cbc.fastq.gz
@@ -43,9 +50,17 @@ mv ${file2trim}_cbc_trimmed_HATC_trimmed.fq.gz ${file2trim}_cbc_trimmed_HATCG.fq
 rm ${file2trim}_cbc_trimmed_HATC.fq.gz
 
 # File cleanup
-if [[ $nocleanup = "" ]]; then
-  echo "cleaning up some files" # prevent this by setting "nocleanup"
-  rm ${file2trim}_cbc.fastq.gz
+echo "checking whether final file exists (${file2trim}_cbc_trimmed_HATCG.fq.gz)"  
+if [[ -f ${file2trim}_cbc_trimmed_HATCG.fq.gz ]]; then
+  if [[ $nocleanup = "" ]]; then
+
+      echo "cleaning up some files" # prevent this by setting "nocleanup"
+      rm ${file2trim}_cbc.fastq.gz
+
+  fi
+else
+  echo "Final output file not detected"  
+  exit 1
 fi
 
 cd $current_dir

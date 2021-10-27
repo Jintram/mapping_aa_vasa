@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # To submit to HPC, use:
-# sbatch --job-name=B52 --time=48:00:00  --mem=20G Wang_collect_files.sh
+# sbatch --job-name=B52 -c 2 --time=48:00:00  --mem=20G Wang_collect_files.sh
 #
 # Or,
 # td="GSM2970361_N1_LV"
@@ -10,7 +10,7 @@
 # td="GSM2970360_N5_LV GSM2970359_N6_LA GSM2970369_N7_LA";tdn="GSM2970360_N5_LV-GSM2970359_N6_LA-GSM2970369_N7_LA"
 # td="GSM2970368_N8_LA GSM2970365_N9_LA GSM2970363_N10_LA";tdn="GSM2970368_N8_LA-GSM2970365_N9_LA-GSM2970363_N10_LA"
 # td="GSM2970364_N11_LA GSM2970367_N12_LA GSM3449619_N13";tdn="GSM2970364_N11_LA-GSM2970367_N12_LA-GSM3449619_N13"
-# sbatch --output=slurm-${tdn}-%x.%j.out --job-name=B52 --time=48:00:00  --mem=30G --export=ALL,INPUT_IDENTIFIERS="${td}" Wang_collect_files.sh
+# sbatch -c 2 --output=slurm-${tdn}-%x.%j.out --job-name=B52 --time=48:00:00  --mem=30G --export=ALL,INPUT_IDENTIFIERS="${td}" Wang_collect_files.sh
 
 # Already done:
 # 
@@ -18,10 +18,15 @@
 
 # GSM2970361_N1_LV GSM2970358_N2_LV GSM2970362_N3_LV GSM2970366_N4_LV GSM2970360_N5_LV GSM2970359_N6_LA GSM2970369_N7_LA GSM2970368_N8_LA GSM2970365_N9_LA GSM2970363_N10_LA GSM2970364_N11_LA GSM2970367_N12_LA GSM3449619_N13 GSM3449620_N14
 if [[ "$INPUT_IDENTIFIERS" == "" ]]; then
-  INPUT_IDENTIFIERS = $1
+  INPUT_IDENTIFIERS=$1
+fi
+if [[ "$INPUT_IDENTIFIERS" == "" ]]; then
+  echo "No identifier given. Exiting .."
+  exit
 fi
 
-datapath='/hpc/hub_oudenaarden/mwehrens/fastq/WANG/'
+datapath='/hpc/hub_oudenaarden/mwehrens/fastq/WANG4/'
+# datapath='/hpc/hub_oudenaarden/mwehrens/fastq/WANG/'
 #datapath=/Volumes/workdrive_m.wehrens_hubrecht/Fastq__raw_files/Wang/
 
 for IDENTIFIER in $INPUT_IDENTIFIERS 
@@ -35,6 +40,7 @@ do
       filename=${IDENTIFIER}_SRR_Acc_List.txt
 
       echo "Collecting data for ${IDENTIFIER}.."
+      # clear / open the files
       echo -n "" > ../${IDENTIFIER}_cat_R1.fastq
       echo -n "" > ../${IDENTIFIER}_cat_R2.fastq
 
@@ -74,8 +80,9 @@ do
       fi
 
       echo "Zipping files"
-      gzip ../${IDENTIFIER}_cat_R1.fastq
-      gzip ../${IDENTIFIER}_cat_R2.fastq
+      gzip ../${IDENTIFIER}_cat_R1.fastq &
+      gzip ../${IDENTIFIER}_cat_R2.fastq &
+      wait
 
       echo "Attempting to DELETE old files"
       if [[ $IDENTIFIER == "" ]]; then

@@ -25,8 +25,14 @@ paired=$4
 source $general_parameter_filepath
 source $run_parameter_filepath
 current_dir=$(pwd)
-echo "Going to $outdir"
-cd $outdir
+
+if [[ $notempdir == "" ]]; then # corrected
+  echo "Going to $TMPDIR"
+  cd $TMPDIR
+else
+  echo "Going to $outdir"
+  cd $outdir
+fi
 
 ################################################################################
 # Outline of this script
@@ -141,7 +147,15 @@ $p2b/bedtools intersect -a ${inbam%.bam}${f2_str}.multimappers.bed -b $refBED -w
 # Note that the x-parameter is strand-specific
 # updated with paired-cigar appropriate search term "/;CG:|;C1:/"
 # updated with R1/R2 detection and appropriate handling of strands
-awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
+if [[ $stranded == 'y' ]]; then
+  strandedyesno_code_part1='if ((readstrand==refstrand && XM==2)||(readstrand!=refstrand && XM==1)) {'
+  strandedyesno_code_part2='}'
+else
+  strandedyesno_code_part1=''
+  strandedyesno_code_part2=''
+fi
+
+awk_pt1='BEGIN {OFS="\t"; w="T"} {
     # annotate reads to know fall inbetween inton/exon boundaries, etc
     
     # jS = junction
@@ -161,9 +175,11 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
     
     # separate readname into two parts (leaving nM/NM into part 1, CG and other fields into part 2)
     sx=match(readname, /;CG:|;C1:/); rn=substr(readname, 0, sx-1); rq=substr(readname,sx+1,length(readname))
+    '
    
-    if ((readstrand==refstrand && XM=2)||(readstrand!=refstrand && XM=1)) {
+awk_pt2=$strandedyesno_code_part1       
    
+awk_pt3='
         # then check whether read fall entirely into annotation
         # if so, add "IN" to signal that
         if ((readstart >= refstart) && (readend <= refend)) {
@@ -173,9 +189,9 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
                 readname=readname";jS:OUT"; w="F";
         # if one side falls outside, annotate which part falls out
         } else if ( ((readstart < refstart)&&(readend <= refend)) || ((readstart <= refstart)&&(readend < refend)) ) {
-                    if (readstrand="+") {readname=readname";jS:5"} else {readname=readname";jS:3"}; w="T"
+                    if (readstrand=="+") {readname=readname";jS:5"} else {readname=readname";jS:3"}; w="T"
                 } else if ( ((readstart > refstart) && (readend >= refend)) || ((readstart >= refstart) && (readend > refend)) ) {
-                    if (readstrand="+") {readname=readname";jS:3"} else {readname=readname";jS:5"}; w="T"
+                    if (readstrand=="+") {readname=readname";jS:3"} else {readname=readname";jS:5"}; w="T"
                 } else {print $0 > "checkme.txt"
         }
     
@@ -192,7 +208,17 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
         if (w=="T") {
           print chr, readstart, readend, rn, readstrand, refname, rq, refend-refstart, x}
         }
-    }'
+      '
+awk_pt4=$strandedyesno_code_part2
+    
+final_awk_command=$(echo "${awk_pt1}${awk_pt2}${awk_pt3}${awk_pt4}")
+
+echo "************************************************************"
+echo "(Debugging, remove..)"
+echo "FINAL AWK COMMAND:"
+echo "************************************************************"
+echo "${final_awk_command}"
+echo "************************************************************"
     
     
 #awk_command_singlemappers_part2_R2='    
@@ -210,25 +236,35 @@ awk_command_singlemappers='BEGIN {OFS="\t"; w="T"} {
 # This is processed further using awk, and then other scripts.
   #cat ${inbam%.bam}.f2.singlemappers.intersect.bed | awk $awk_command_singlemappers > ${inbam%.bam}.singlemappers_genes.bed
 
-cat ${inbam%.bam}${f2_str}.singlemappers.intersect.bed | awk "${awk_command_singlemappers}" > ${inbam%.bam}.singlemappers_genes.bed
-sort -k4 ${inbam%.bam}.singlemappers_genes.bed > ${inbam%.bam}.nsorted.singlemappers_genes.bed 
-cat ${inbam%.bam}${f2_str}.multimappers.intersect.bed | awk "${awk_command_singlemappers}" > ${inbam%.bam}.multimappers_genes.bed
+cat ${inbam%.bam}${f2_str}.singlemappers.intersect.bed | awk "${final_awk_command}" > ${inbam%.bam}.singlemappers_genes.bed
+#sort -k4 ${inbam%.bam}.singlemappers_genes.bed > ${inbam%.bam}.nsorted.singlemappers_genes.bed 
+  # sorting here is not necessary
+
+cat ${inbam%.bam}${f2_str}.multimappers.intersect.bed | awk "${final_awk_command}" > ${inbam%.bam}.multimappers_genes.bed
 sort -k4 ${inbam%.bam}.multimappers_genes.bed > ${inbam%.bam}.nsorted.multimappers_genes.bed 
   # note that the python script to process these reads is completely dependent on reads
   # being sorted by name, if not, reads will be double counted
 
 ################################################################################
 
-if [[ $nocleanup = "" ]]; then
-  echo "cleaning up some files" # prevent this by setting "nocleanup"
-  
-  rm $inbam
-  rm ${inbam%.bam}${f2_str}.singlemappers.bam
-  rm ${inbam%.bam}${f2_str}.multimappers.bam
-  
-  rm ${inbam%.bam}${f2_str}.sam
-  rm ${inbam%.bam}${f2_str}.singlemappers.sam
-  rm ${inbam%.bam}${f2_str}.multimappers.sam
+if [[ -f ${inbam%.bam}.singlemappers_genes.bed && -f ${inbam%.bam}.nsorted.multimappers_genes.bed ]]; then
+  if [[ $nocleanup = "" ]]; then
+    echo "cleaning up some files" # prevent this by setting "nocleanup"
+    
+    #rm ${inbam%.bam}.singlemappers_genes.bed
+    rm ${inbam%.bam}.multimappers_genes.bed
+    
+    rm $inbam
+    rm ${inbam%.bam}${f2_str}.singlemappers.bam
+    rm ${inbam%.bam}${f2_str}.multimappers.bam
+    
+    rm ${inbam%.bam}${f2_str}.sam
+    rm ${inbam%.bam}${f2_str}.singlemappers.sam
+    rm ${inbam%.bam}${f2_str}.multimappers.sam
+  fi
+else
+  echo "output files not detected; returning non-zero exit"
+  exit 1  
 fi
 
 ################################################################################

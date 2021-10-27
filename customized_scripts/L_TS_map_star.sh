@@ -22,17 +22,26 @@ outprefix=$4
 
 source $general_parameter_filepath
 source $run_parameter_filepath
+
 current_dir=$(pwd)
-echo "Going to $outdir"
-cd $outdir
+
+if [[ $TMPDIR == "" ]]; then
+  echo "Going to $outdir"
+  cd $outdir
+else
+  echo "Going to $TMPDIR"
+  cd $TMPDIR
+fi
+
 ################################################################################
 
-# First unzipping (for local use)
-# zcat doesn't work for some reason on local mac
+# For local use:
+# - zcat doesn't work for some reason on local mac
+# - not multi-threaded
 #gunzip ${inputfq}.gz
 #${p2star}/STAR --genomeDir ${genome} --readFilesIn ${inputfq} --readFilesCommand cat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
 
-${p2star}/STAR --genomeDir ${genome} --readFilesIn ${inputfq}.gz --readFilesCommand zcat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
+${p2star}/STAR --runThreadN 8 --genomeDir ${genome} --readFilesIn ${inputfq}.gz --readFilesCommand zcat --outFilterMultimapNmax 20 --outSAMunmapped Within --outSAMtype BAM Unsorted --outSAMattributes All  --outFileNamePrefix ${outprefix}
 
 rm -r ${outprefix}_STARtmp
 rm ${outprefix}Log.progress.out
@@ -45,10 +54,26 @@ mv ${outprefix}Log.final.out ${outprefix}Log.final.txt
 
 ################################################################################
 
-if [[ $nocleanup = "" ]]; then
-  echo "cleaning up some files" # prevent this by setting "nocleanup"
-  #rm ${inputfq}
-  rm ${inputfq}.gz
+if [[ -f ${outprefix}Aligned.out.bam ]]; then
+  
+  if [[ $nocleanup = "" ]]; then
+    echo "cleaning up some files" # prevent this by setting "nocleanup"
+    #rm ${inputfq}
+    rm ${inputfq}.gz
+  fi
+  
+else
+  
+  echo "output files not found, returning error"
+  exit 1
+  
+fi
+
+# copy output files from temp dir to output dir 
+if [[ $TMPDIR != "" ]]; then
+  
+  cp ${outprefix}Aligned.out.bam $outdir/
+  
 fi
 
 ################################################################################

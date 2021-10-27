@@ -33,3 +33,7 @@ while read line; do
 done < $filename
 
 echo "DONE. ${IDENTIFIER} should be fully downloaded.." >> log_${IDENTIFIER}.txt
+
+
+
+

@@ -58,17 +58,36 @@ then
   step="default"
 fi
 
-### check existence of input fastq files
-if [ ! -f ${lib}_R1.fastq.gz ]
-then
-    echo "${lib}_R1.fastq.gz not found"
-    exit
+if [[ "${TMPDIR}" == "" ]]; then
+  TMPDIR=${outdir}
 fi
 
-if [ ! -f ${lib}_R2.fastq.gz ]
-then
-    echo "${lib}_R2.fastq.gz not found"
+
+# Option to first run another script
+# (I put this in to move a file to the temporary drive to 
+# continue the pipeline halfway ..)
+if [[ $filetorunbefore != "" ]]; then
+  if [[ -f $filetorunbefore ]]; then
+    source $filetorunbefore
+  else
+    print "Couldn't find file to run beforehand: $filetorunbefore"
     exit
+  fi
+fi
+
+### check existence of input fastq files (only when running from start)
+if [[ "${step}" == *"(1)"* || "${step}" == "default" ]]; then
+  if [ ! -f ${lib}_R1.fastq.gz ]
+  then
+      echo "${lib}_R1.fastq.gz not found"
+      exit
+  fi
+
+  if [ ! -f ${lib}_R2.fastq.gz ]
+  then
+      echo "${lib}_R2.fastq.gz not found"
+      exit
+  fi
 fi
 
 ### check python version (we want version 3)
@@ -86,54 +105,62 @@ then
     exit
 fi
 
+t_start=$(date +%s)
+
 ### extract cell barcodes (this will split the read files into 3 batches; poly-T, targeted and unclassified.)
 if [[ "${step}" == *"(1)"* || "${step}" == "default" ]]; then
     sh ${p2s}/L_TS_extractBC.sh $general_parameter_filepath $run_parameter_filepath vasaplate $lib
-    $exitcode = $?
+    exitcode=$?
     
     if [[ $exitcode -ne 0 ]]; then
-      echo "terminating because script didn't properly end."
+      echo "@step1 terminating because script didn't properly end."
       exit 1
     fi
     
 fi
+t_s1=$(date +%s)
+echo "Step 1 took: $(($t_s1-$t_start)) seconds"
 
 if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
     ### trim files
     # (no local version needed)
     
     # For polyT (if applicable):
-    if [[ -f "${outdir}/${lib}_pT_R2_cbc.fastq.gz" ]]; then
+    if [[ -f "${TMPDIR}/${lib}_pT_R2_cbc.fastq.gz" ]]; then
       ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2
-      $exitcode = $?
+      exitcode=$?
       
       if [[ $exitcode -ne 0 ]]; then
-        echo "terminating because script didn't properly end."
+        echo "@step2 terminating because script didn't properly end."
         exit 1
       fi
     fi
     
     # For non-classified:
     ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2 
-    $exitcode = $?
+    exitcode=$?
     
     if [[ $exitcode -ne 0 ]]; then
-      echo "terminating because script didn't properly end."
+      echo "@step2 terminating because script didn't properly end."
       exit 1
     fi
     
     # For TS (if applicable)
     if [ $TS = '1' ]; then
+      echo "Currently work in progress!"
+      
       ${p2s}/TS_trim_paired.sh $general_parameter_filepath $run_parameter_filepath ${lib}_TS 
-      $exitcode = $?
+      exitcode=$?
       
       if [[ $exitcode -ne 0 ]]; then
-        echo "terminating because script didn't properly end."
+        echo "@step2 terminating because script didn't properly end."
         exit 1
       fi
     fi
   
 fi
+t_s2=$(date +%s)
+echo "Step 2 took: $(($t_s2-$t_s1)) seconds"
 
 if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
 
@@ -145,34 +172,79 @@ if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
       #
       
       # map poly-T reads to ribo (only if pT file exists)
-      if [[ -f "${outdir}/${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz" ]]; then
+      if [[ -f "${TMPDIR}/${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz" ]]; then
         ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2_cbc_trimmed_HATCG.fq.gz ${lib}_pT_cbc_trimmed_HATCG 
+        exitcode=$?
+        
+        if [[ $exitcode -ne 0 ]]; then
+          echo "@step3 terminating because script didn't properly end."
+          exit 1
+        fi
       fi
       
       # map unclassified reads to ribo
       ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG 
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step3 terminating because script didn't properly end."
+        exit 1
+      fi
       
       # map targeted reads to ribo
       if [ $TS = '1' ]; then
         ${p2s}/L_TS_ribo-bwamem_paired.sh ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s
+        exitcode=$?
+        
+        if [[ $exitcode -ne 0 ]]; then
+          echo "@step3 terminating because script didn't properly end."
+          exit 1
+        fi
       fi
     
 fi      
-    
+t_s3=$(date +%s)
+echo "Step 3 took: $(($t_s3-$t_s2)) seconds"
+
 if [[ "${step}" == *"(4)"* || "${step}" == "default" ]]; then
     ### map to genome 
+    
     # For the poly-T data (single)
-    if [[ -f "${outdir}/${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq.gz" ]]; then
+    if [[ -f "${TMPDIR}/${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq.gz" ]]; then
       ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_pT.nonRibo_E99_
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step4 terminating because script didn't properly end."
+        exit 1
+      fi
     fi
+    
     # Then for the unclassified data (single)
     ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
+    exitcode=$?
+    
+    if [[ $exitcode -ne 0 ]]; then
+      echo "@step4 terminating because script didn't properly end."
+      exit 1
+    fi
+    
     # For the paired TS data:
     if [ $TS = '1' ]; then      
       ${p2s}/L_TS_map_star_paired.sh $general_parameter_filepath $run_parameter_filepath ${lib}_TS_cbc_val_HATCG_R1.nonRibo.fastq ${lib}_TS_cbc_val_HATCG_R2.nonRibo.fastq ${lib}_TS.nonRibo_E99_
+      exitcode=$?
         # note: locally, .gz is removed from input file names
+        
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step4 terminating because script didn't properly end."
+        exit 1
+      fi
+        
     fi
+    
 fi
+t_s4=$(date +%s)
+echo "Step 4 took: $(($t_s4-$t_s3)) seconds"
 
 if [[ "${step}" == *"(5)"* || "${step}" == "default" ]]; then
     ### map locations to genes (accounting for ambiguities)
@@ -183,18 +255,43 @@ if [[ "${step}" == *"(5)"* || "${step}" == "default" ]]; then
       # this script uses awk commands to apply a set of pre-determined rules for 
       # dealing with ambiguities in the assignment of locations to ref transcripts
     #
+    
     # For pT subset
-    if [[ -f "${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.bam" ]]; then
+    if [[ -f "${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.bam" ]]; then
       ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_pT.nonRibo_E99_Aligned.out.bam n
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step5 terminating because script didn't properly end."
+        exit 1
+      fi
     fi
+    
     # For nc subset
     ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_nc.nonRibo_E99_Aligned.out.bam n
+    exitcode=$?
+    
+    if [[ $exitcode -ne 0 ]]; then
+      echo "@step5 terminating because script didn't properly end."
+      exit 1
+    fi
+    
     # For TS subset
     if [ $TS = '1' ]; then
       ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_TS.nonRibo_E99_Aligned.out.bam y
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step5 terminating because script didn't properly end."
+        exit 1
+      fi
     fi
       
+    echo "Step 5 finished."
+      
 fi
+t_s5=$(date +%s)
+echo "Step 5 took: $(($t_s5-$t_s4)) seconds"
 
 if [[ "${step}" == *"(6)"* || "${step}" == "default" ]]; then
       
@@ -204,61 +301,103 @@ if [[ "${step}" == *"(6)"* || "${step}" == "default" ]]; then
      
     # For pT
     
-    if [[ -f "${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed" ]]; then
-      $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_pT vasa
-      if [[ $nocleanup = "" ]]; then
-        echo "cleaning up some files" # prevent this by setting "nocleanup"
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers_genes.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
-        rm ${outdir}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.intersect.bed
-        
+    if [[ -f "${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed" ]]; then
+      $pythonbin ${p2s}/TS_countTables_final.py ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${TMPDIR}/${lib}_pT vasa
+      exitcode=$?
+      
+      if [[ -f "${TMPDIR}/${lib}_pT_total.TranscriptCounts.tsv" && $exitcode == 0 ]]; then
+        if [[ $nocleanup = "" ]]; then
+          echo "cleaning up some files" # prevent this by setting "nocleanup"
+          
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.bed
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.bed
+          
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+          #rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+          
+          #rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers_genes.bed
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+          
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+          rm ${TMPDIR}/${lib}_pT.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+          
+        fi
+      else
+        echo "@step6 pT output count table doesn't exist or non-zero exit, exiting with non-zero exit status"
+        exit 1
       fi
+      
     fi
     
     # For nc
     
-    $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_nc vasa
+    $pythonbin ${p2s}/TS_countTables_final.py ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${TMPDIR}/${lib}_nc vasa
+    exitcode=$?
     
-    if [[ $nocleanup = "" ]]; then
-      echo "cleaning up some files" # prevent this by setting "nocleanup"
+    if [[ -f "${TMPDIR}/${lib}_nc_total.TranscriptCounts.tsv" && $exitcode == 0 ]]; then
+    
+      if [[ $nocleanup = "" ]]; then
+        echo "cleaning up some files" # prevent this by setting "nocleanup"
+        
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.bed
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.bed
+        
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+        #rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+        
+        #rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers_genes.bed
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+        
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+        rm ${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+                           
+      fi
       
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers_genes.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
-      rm ${outdir}/${lib}_nc.nonRibo_E99_Aligned.out.multimappers.intersect.bed
-                         
+    else
+      echo "@step6 nc output count table doesn't exist or non-zero exit, exiting with non-zero exit status"
+      exit 1
     fi
     
     # For TS
     if [ $TS = '1' ]; then
       
-      $pythonbin ${p2s}/TS_countTables_final.py ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${outdir}/${lib}_TS vasa 1
+      $pythonbin ${p2s}/TS_countTables_final.py ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed ${TMPDIR}/${lib}_TS vasa 1
+      exitcode=$?
       
-      if [[ $nocleanup = "" ]]; then
-        echo "cleaning up some files" # prevent this by setting "nocleanup"
-        
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers_genes.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
-        rm ${outdir}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.intersect.bed
-                           
+      if [[ -f "${TMPDIR}/${lib}_TS_total.TranscriptCounts.tsv" && $exitcode == 0 ]]; then
+        if [[ $nocleanup = "" ]]; then
+          echo "cleaning up some files" # prevent this by setting "nocleanup"
+          
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.bed
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.bed
+          
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers_genes.bed
+          #rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.singlemappers_genes.bed
+          
+          #rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers_genes.bed
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed
+          
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.singlemappers.intersect.bed
+          rm ${TMPDIR}/${lib}_TS.nonRibo_E99_Aligned.out.multimappers.intersect.bed
+                             
+        fi
+      else
+        echo "@step6 TS output count table doesn't exist or non-zero exit, exiting with non-zero exit status"
+        exit 1
       fi
+        
     fi
+    
+    echo "Copying tsv files to output dir"
+    
+    mkdir -p ${outdir}/counttables
+    cp ${TMPDIR}/*.tsv ${outdir}/counttables/
+    
+    echo "step 6 finished   "
 
 fi
+t_s6=$(date +%s)
+echo "Step 6 took: $(($t_s6-$t_s5)) seconds"
 
 if [[ "${step}" == *"(7)"* ]]; then  
 
@@ -279,8 +418,44 @@ if [[ "${step}" == *"(7)"* ]]; then
 
     # done
 fi
+t_s7=$(date +%s)
+
+echo "Creating final report"
+
+echo "Step 1 took: $(($t_s1-$t_start)) seconds"
+echo "Step 2 took: $(($t_s2-$t_s1)) seconds"
+echo "Step 3 took: $(($t_s3-$t_s2)) seconds"
+echo "Step 4 took: $(($t_s4-$t_s3)) seconds"
+echo "Step 5 took: $(($t_s5-$t_s4)) seconds"
+echo "Step 6 took: $(($t_s6-$t_s5)) seconds"
+echo "Step 7 took: $(($t_s7-$t_s6)) seconds"
+
+mkdir -p $outdir/log
+
+if [[ "${TMPDIR}" != "" ]]; then
+  
+  echo "Gathering temp dir info.."
+  
+  # let's get contents of tempdir
+  ls -lhat ${TMPDIR} > ${outdir}/tempdir_ls.txt
+  # let's copy log files and such
+  cp $TMPDIR/*.log $outdir/log/
+  cp $TMPDIR/*.txt $outdir/log/
+
+  if [[ $returntempfiles != "" ]]; then
+    echo "dumping temp files (you dont want this for a real run!)"
+    mkdir -p $outdir/tmpdump
+    cp $TMPDIR/* $outdir/tmpdump
+  fi
+  
+fi
+
+cp $general_parameter_filepath $outdir/log/
+cp $run_parameter_filepath $outdir/log/
 
 
+
+echo "** Job done **" 
 
 
 

@@ -9,6 +9,22 @@ import pickle
 PRINTFLAG=True
 DECISIONFLAG=False
 
+# Example on how to run this script:
+# TS_countTables_final.py /Users/m.wehrens/Desktop/temp/SRR6641031_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed /Users/m.wehrens/Desktop/temp/SRR6641031_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed /Users/m.wehrens/Desktop/temp/test2 vasa
+
+# to play with for debugging:
+#bedsingle = '/Users/m.wehrens/Desktop/temp/SRR6641031_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed'
+#bedmulti = '/Users/m.wehrens/Desktop/temp/SRR6641031_nc.nonRibo_E99_Aligned.out.nsorted.multimappers_genes.bed'
+#output= '/Users/m.wehrens/Desktop/temp/test2'
+#protocol = 'vasa'
+#bothmates=False
+#
+# bedsingle='/Volumes/fastq_m.wehrens/Mapping/WANG4/mapping/head_p.N1.plate.97474.part.1_cat_nc.nonRibo_E99_Aligned.out.singlemappers_genes.bed'
+# bedmulti='/Volumes/fastq_m.wehrens/Mapping/WANG4/mapping/head_p.N1.plate.97474.part.1_cat_nc.nonRibo_E99_Aligned.out.multimappers_genes.bed'
+# output= '/Volumes/fastq_m.wehrens/Mapping/WANG4/mapping/testcases/'
+# protocol = 'vasa'
+# bothmates=False
+
 try:
     bedsingle = sys.argv[1]
     bedmulti = sys.argv[2]
@@ -21,6 +37,15 @@ if len(sys.argv)>5:
     bothmates = sys.argv[5]
 else:
     bothmates = False
+
+
+# TODO!
+# This needs to be checked, because also C1 might now be present, which might disturb
+# the expected structure
+if bothmates: 
+    CSTRING='C2:'
+else:
+    CSTRING='CG:'
 
 if PRINTFLAG:
     print("Creating count table for "+bedsingle)
@@ -60,7 +85,11 @@ def get_cell_UMI(name, protocol = 'vasa'):
 # mapping is most likely to be correct
 # 
 # written by a.alemany, comments by m.wehrens
-def gene_assignment_single(genes, labels, infos, covs, tlens):
+def gene_assignment_single(genes, labels, infos, covs, tlens, mate_select=False, CSTRING='CG:'):
+    # global mytiming2
+    
+    # For timing of processes
+    # t_proc2= 0; t_proc1= 0; t_sel1_2= 0; t_sel1_1= 0; t_sel2_2= 0; t_sel2_1= 0; t_sel3_2= 0; t_sel3_1= 0; t_sel4_2= 0; t_sel4_1= 0; t_sel5_2= 0; t_sel5_1= 0
     
     # if there's only one gene, we're done, take that one
     if len(set(genes)) == 1 and len(set(labels)) == 1:
@@ -74,15 +103,27 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
     # collecting info into dataframe (df) with all features
     else:
         # get the df (anna's version)
-        #df = pd.DataFrame({'genes': genes, 
-        #    'labels': labels,
-        #    'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
-        #    'nM': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
-        #    'jS':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
-        #    'covs': [float(cov) for cov in covs],
-        #    'tlens': [int(tl) for tl in tlens]
-        #    })
+        #t_proc1 = perf_counter() # PERFORMANCE
+        
+        df = pd.DataFrame({'genes': genes, 
+            'labels': labels,            
+            #'cigars': [c.rsplit(';nM:')[0].rsplit('CG:')[1] for c in infos],
+            #'nM': [int(c.rsplit(';nM:')[1].rsplit(';jS:')[0]) for c in infos],
+            #'jS':  [c.rsplit(';jS:')[-1] if ';jS:' in c else 'unknown' for c in infos],
+            'cigars': [c.rsplit(';nM:')[0].rsplit(CSTRING)[1] for c in infos],
+            'nM': [c.rsplit(';jS:')[0].rsplit('nM:')[1] for c in infos],
+            'jS': [c.rsplit(';XM:')[0].rsplit('jS:')[1] for c in infos],
+            'XM': [c.rsplit('^')[0].rsplit('XM:')[1] for c in infos],            
+            'covs': [float(cov) for cov in covs],
+            'tlens': [int(tl) for tl in tlens]
+            })
+        
+        # t_proc2 = perf_counter() # PERFORMANCE
 
+        # alternative version, which is way worse in performance,
+        # can be improved by pre-searching for terms and storing the mapping,
+        # but that's still 2x slow as anna's version
+        # 
         # get the df (updated from above)
         # not sure what's best performance-wise, but this is more robust
         # for the order of the items, and also allows easy renaming
@@ -94,17 +135,21 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
         #       boundary was crossed
         # cov = coverage? (not used for decision)
         # tlen = refend-refstart, so total feature length (not used for decision) 
-        # XM = from which mate (read 1, read 2) this read originates
-        temp_list = np.transpose([[x.split(':') for x in entry.split(';')] for entry in infos])
-        df = pd.DataFrame({temp_list[0][i][0]: temp_list[1][i] for i in range(len(temp_list[1]))})
-        df['genes'] = genes
-        df['labels'] = labels
-        df['covs'] = covs
-        df['tlens'] = tlens
-        df.rename(columns={'C2':'cigars','CG':'cigars'},inplace=True)
+        # XM = from which mate (read 1, read 2) this read originates        
+        #
+        #t_proc1 = perf_counter()
+        #temp_list = np.transpose([[x.split(':') for x in entry.split(';')] for entry in infos])
+        #df = pd.DataFrame({temp_list[0][i][0]: temp_list[1][i] for i in range(len(temp_list[1]))})
+        #df['genes'] = genes
+        #df['labels'] = labels
+        #df['covs'] = covs
+        #df['tlens'] = tlens
+        #df.rename(columns={'C2':'cigars','CG':'cigars'},inplace=True)
+        #t_proc2 = perf_counter()
         
-        # for now, let's ignore read 1
-        df = df.iloc[df['XM'].values=='2',]
+        # if activated, this filters out read 1 (which is for now placeholder solution when using mapping of both mates)
+        if mate_select: 
+            df = df.iloc[df['XM'].values=='2',]
         
         # === first selection ===
         # only take along features that have the minimum amount of mismatches
@@ -116,14 +161,24 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
         gdf = {g: df_g for g, df_g in df.groupby('genes') if '_TEC' not in g}
 
         # Merge multiple features into one if they all have the same properties
-        # I think this is for rare cases, e.g. where the read is mapped to 
+        # Later note: the amount of different features is later extracted
+        # from the amount of entries each gene has; so this facilitates that also
+        # 
+        # Previous note: I think this is for rare cases, e.g. where the read is mapped to 
         # a repetetive sequence feature, where all mappings fall within the
         # same feature (or within features that share that name, like 
         # variant alleles)
+        
+        # t_sel1_1 = perf_counter() # PERFORMANCE
+        
         for g in gdf:
             if len(gdf[g]) > 1 and len(set(gdf[g]['labels'])) == 1 and len(set(gdf[g]['jS'])) == 1:
                 gdf[g] = gdf[g].head(1)
-                
+
+        # t_sel1_2 = perf_counter() # PERFORMANCE                
+        
+        # t_sel2_1 = perf_counter() # PERFORMANCE
+        
         # === selection ===
         # if there's still multiple genes, and all genes only have same type
         # of overlap with the features, select non-intronic hits
@@ -131,6 +186,10 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
             if len(set(df['labels'])) > 1: 
                 fdf = df[df['labels']!='intron']
                 gdf = {g: df_g for g, df_g in fdf.groupby('genes') if '_TEC' not in g}
+
+        # t_sel2_2 = perf_counter() # PERFORMANCE
+        
+        # t_sel3_1 = perf_counter() # PERFORMANCE
                 
         # === selection ===
         # if a read hits a single feature, but has a gap in the cigar
@@ -144,8 +203,15 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
         for g in xg:
             del gdf[g]
             
+        # t_sel3_2 = perf_counter() # PERFORMANCE            
+            
+
+        # t_sel4_1 = perf_counter() # PERFORMANCE        
+        
         # === selection === 
         # remove the multi-feature genes that don't also have a gap in their alignment
+        #
+        # Old note (incorrect since exon-exon would jxn would fall all "IN"):
         # (if a read covers an exon-exon junction, one expects both that there's 
         # non-overlap with the exon features due the junction, and also
         # that the read has a gap in the alignment)
@@ -163,6 +229,26 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
             # delete 'm
             for g in xg:
                 del gdf[g]
+
+        # t_sel4_2 = perf_counter() # PERFORMANCE        
+
+        # t_sel5_1 = perf_counter() # PERFORMANCE        
+                
+        # === addition by MW: if multiple equal features, select 'ProteinCoding' one ===        
+        # (note that e.g. "real" lincRNA reads generally don't precisely fall into exons --
+        # hence this selection is mostly to prevent e.g. exonic reads to map to 
+        # overlapping other features ..)
+
+        
+        if len(gdf) > 1:
+            # determine which ones are 'ProteinCoding'
+            selection_g = [g for g in gdf if '_ProteinCoding' in g]
+            # if there are any, select those:
+            if len(selection_g)>0:
+                #print('Protein given priority ..\n')
+                #print('Before: '+'-'.join([g for g in gdf])+'\n')
+                gdf = {g: gdf[g] for g in selection_g}
+                #print('After: '+'-'.join([g for g in gdf])+'\n============\n')                
                 
         # === end: generate gene name ===
         # now simply paste together all gene names of all remaining genes
@@ -180,8 +266,12 @@ def gene_assignment_single(genes, labels, infos, covs, tlens):
         # if no genes are remaining, return empty name
         else:
             gene = ''; label = ''
+
+        # t_sel5_2 = perf_counter() # PERFORMANCE
             
-            
+    # PERFORMANCE ASSESSMENT
+    # mytiming2 = list(map(add, mytiming2, [t_proc2-t_proc1, t_sel1_2-t_sel1_1, t_sel2_2-t_sel2_1, t_sel3_2-t_sel3_1, t_sel4_2-t_sel4_1, t_sel5_2-t_sel5_1]))
+                    
     return label, gene, df
 
 def gene_assignment_single_usepairinfo_experimental(genes, labels, infos, covs, tlens, bothmates=0):
@@ -381,6 +471,12 @@ def gene_assignment_single_usepairinfo_experimental(genes, labels, infos, covs, 
 # f=open(bedsingle)
 # line=f.readline()
 
+# PERFORMANCE ASSESSMENT
+#from time import perf_counter
+#from operator import add
+#mytiming = [0, 0, 0, 0, 0]
+#mytiming2 = [0, 0, 0, 0, 0, 0]
+
 # count reads and assign
 cnt = {}
 countLabels = set()
@@ -390,9 +486,13 @@ if DECISIONFLAG:
     f_decisions = open(output+"_singlemapper_decisions.tsv", "w")
 with open(bedsingle) as f:
     for i, line in enumerate(f):    
-                
-        ch, x0, x1, name, strand, gene, info, tlen, cov = line.rstrip().rsplit('\t')
+           
+        # tread1 = perf_counter() # PERFORMANCE        
         
+        ch, x0, x1, name, strand, gene, info, tlen, cov = line.rstrip().rsplit('\t')
+
+        # tread2 = perf_counter() # PERFORMANCE
+                
         if 'tRNA' in gene:
             
             gene = gene.replace('-','.')
@@ -411,8 +511,20 @@ with open(bedsingle) as f:
                 # debug
                 # break 
                 
+                # t_umi1 = perf_counter() # PERFORMANCE
+                
+
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
+
+                # t_umi2 = perf_counter()   # PERFORMANCE
+                
+                # t_det1 = perf_counter() # PERFORMANCE
+                
+                
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates, CSTRING=CSTRING)
+                
+                # t_det2 = perf_counter() # PERFORMANCE
+                         
                 
 #                if len(df)>1: 
 #                    otc.write(r0)
@@ -421,30 +533,45 @@ with open(bedsingle) as f:
 #                    otc.write('\n\n')
                 
                 if xgene != '': 
+                    
+                    # t_addct1 = perf_counter() # PERFORMANCE
+                    
                     cnt = addReadCount(cnt, cell, xgene, umi, label)
                     countLabels.add(label)
+                    
+                    # t_addct2 = perf_counter() # PERFORMANCE
+                    
                     
                 # write mapping to file, for later use in targeted sequencing analysis
                 # (bit redundant for single mappers, but easier for later workflow)                    
                 if DECISIONFLAG:
                     f_decisions.write(r0+'\t'+xgene+'\n')
 
-                # debug feature
-                #if 'DYNC1LI2' in xgene:
-                #    break
-                    
                 # start again
+
+                # t_proc1 = perf_counter() # PERFORMANCE
+                
                 genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
                 r0 = name
+                
+                # t_proc2 = perf_counter() # PERFORMANCE
                 
             else: 
                 
                 genes.append("_".join(gene.rsplit("_")[:-1])); labels.append(gene.rsplit("_")[-1]); infos.append(info); covs.append(cov); tlens.append(tlen)
 
+    # PERFORMANCE ASSESSMENT
+    # mytiming = list(map(add, mytiming, [tread2-tread1, t_umi2-t_umi1, t_det2-t_det1, t_addct2-t_addct1, t_proc2-t_proc1]))
+    
+print("Singles done")    
 
 #otc.close()
 if DECISIONFLAG:
     f_decisions.close()
+
+# for debugging purposes;
+# f=open(bedmulti)
+# cnt={}; case=0
 
 # again with multi-mappers
 #otc = open(output + '-check_assignments_multipleMappers.txt', 'w')
@@ -476,7 +603,7 @@ with open(bedmulti) as f:
             if name != r0: 
                                 
                 cell, umi = get_cell_UMI(r0, protocol)
-                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens)
+                label, xgene, df = gene_assignment_single(genes, labels, infos, covs, tlens, bothmates, CSTRING=CSTRING)
 #                if len(df) > 1:
 #                    otc.write(r0)
 #                    otc.write(str(df))
@@ -491,10 +618,18 @@ with open(bedmulti) as f:
                     cnt = addReadCount(cnt, cell, xgene, umi, label)
                     countLabels.add(label)
                     
+                # DEBUG 
+                if xgene.find('_MTND4P12_') != -1:
+                    print('GOI found')
+                    case+=1
+                    if (case==4):
+                        break              
+                lastline=line
+                    
                 # start again
                 genes = ["_".join(gene.rsplit("_")[:-1])]; labels = [gene.rsplit("_")[-1]]; infos = [info]; covs = [cov]; tlens = [tlen]
                 r0 = name
-                
+                                
             else: 
                 
                 # otherwise just keep collecting entries 
@@ -503,6 +638,8 @@ with open(bedmulti) as f:
 #otc.close()
 if DECISIONFLAG:
     f_decisions.close()
+
+print("Multis done")    
 
 ###############################################################################
 # more functions
@@ -736,6 +873,6 @@ spliced_reads_unigenes.to_csv(output + '_uniaggGenes_spliced.ReadCounts.tsv', se
 spliced_UMI_unigenes.to_csv(output + '_uniaggGenes_spliced.UFICounts.tsv', sep = '\t')
 spliced_transcripts_unigenes.to_csv(output + '_uniaggGenes_spliced.TranscriptCounts.tsv', sep = '\t')
 
-
+print("Count table script done!")
 
 

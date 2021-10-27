@@ -19,6 +19,6 @@ p2star=/usr/local/bin
 
 pythonbin=/Users/m.wehrens/anaconda3/bin/python
 
-p2bedtools=/hpc/hub_oudenaarden/aalemany/bin/bedtools2/bin/
+p2bedtools=/Users/m.wehrens/Software_custom/bedtools2/bin/
 p2b=$p2bedtools
 

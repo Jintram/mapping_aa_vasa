@@ -3,9 +3,13 @@
 echo "Setting (server) run parameters"
 
 # format for step: step="(1)(3)" etc or step="default", latter runs all default
+# note that at the server, temporary files might be deleted ..
 step="default"
 
-outdir=/hpc/hub_oudenaarden/mwehrens/fastq/WANG2/mapping
+#nocleanup=1
+#returntempfiles=1 # on HPC, copy tempfiles from $TMPDIR to $outdir
+
+outdir=/hpc/hub_oudenaarden/mwehrens/fastq/WANG4/mapping
 
 # read_length - 1 (for MOUSE: 59, 74, 96, 246; for HUMAN: 74, 136)
 n=49
