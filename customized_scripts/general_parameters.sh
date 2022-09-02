@@ -13,6 +13,7 @@ path2trimgalore=$p2trimgalore
 #p2cutadapt=/hpc/hub_oudenaarden/aalemany/bin
 p2cutadapt=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin
 path2cutadapt=$p2cutadapt
+  # run "python $p2cutadapt/cutadapt --version" to check version
 
 #p2bwa=/hpc/hub_oudenaarden/bin/software/bwa-0.7.10
 p2bwa=/hpc/hub_oudenaarden/mwehrens/bin/miniconda3/bin

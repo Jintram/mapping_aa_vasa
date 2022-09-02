@@ -15,9 +15,10 @@ n=74
 #genome=/hpc/hub_oudenaarden/group_references/ensembl/99/homo_sapiens/star_v273a_NOMASK_NOERCC_index_$n
 #refBED=/hpc/hub_oudenaarden/aalemany/vasaseq/ref_seqs/Homosapines_ensemble99.homemade_IntronExonTrna.bed
 riboref=/hpc/hub_oudenaarden/mwehrens/ref/rRNA/unique_rRNA_human.fa
+  # I assume /pub/release-93/fasta/homo_sapiens/ncrna , filter for biotype (but this file was obtained from anna)
 genome=/hpc/hub_oudenaarden/mwehrens/ref/GRCh38.93/STAR-indexed-74
   # Note: this can be downloaded from 
-  # - /pub/release-93/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+  # - ftp.ensembl.org/pub/release-93/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz  
   # - ftp.ensembl.org/pub/release-93/gtf/homo_sapiens/Homo_sapiens.GRCh38.93.gtf
 refBED=/hpc/hub_oudenaarden/mwehrens/ref/GRCh38.93/homeMadeBed/homeMade_IntronsExons__Homo_sapiens.GRCh38.93__Final.bed
 

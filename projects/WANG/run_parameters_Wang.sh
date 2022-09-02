@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Note that Wang UMIs were of variable length, which is why I eventually use only 
+# the 1st 10 nts in the umi_tools script (using awk commands).
+
 echo "Setting (server) run parameters"
 
 # format for step: step="(1)(3)" etc or step="default", latter runs all default
