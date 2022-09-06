@@ -51,6 +51,11 @@ then
     exitcode=$?
       # Note: by *not* giving the option "--umifirst", it will be set to 0.
       # idem for  --TTTfilter (which is non-consequential, given that this data won't contain polyT seqs anyhow.)
+elif [ $protocol == 'protocol0' ]
+then
+  ${pythonbin} ${path2scripts}/TS_concatenator.py --fqf ${lib} --cbcfile ${path2scripts}/bc_0.tsv --cbchd 0 --lenumi 0 --lencbc 0 --outdir ${TMPDIR} $TS_str
+  exitcode=$?
+      # note: this is another "hack", to accomodate for fastq files without BC or UMI
 else
     echo "unknown protocol [celseq1, celseq2, vasaplate]"
     exit
