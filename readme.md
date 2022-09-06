@@ -29,10 +29,41 @@ References need to set up in a custom way.
 Reference files that are needed are:
 - **riboref** This is a fasta format file that contains all the rRNA sequences.
 - **genome** This is the STAR indexed genome.
-- **refBED** This is the annotation of the genome, encoded in a customized bed file. This bed file is generated based on a gtf file, see the file: `/mapping_aa_private_vasa/customized_scripts/setting_up/convert_gtf_to_bed.sh`.
+- **refBED** This is the annotation of the genome, encoded in a customized bed file. This bed file is generated based on a gtf file, see the file: `./setting_up/convert_gtf_to_bed.sh`.
+
+There's a file called `general_parameters.sh` which contains file paths to the
+software that needs to be installed.
+- path to directory with these custom scripts
+- path to trimgalore
+- path to cutadapt
+- path to bwa
+- path to samtools
+- path to STAR
+- path to python
+- path to bedtools
+
+## Input files
+This mapping pipeline requires fastq files, archived (.gz format), and it expects 
+files from multiple lanes to be merged.
 
 ## File structure and usage
-..
+Practically, the script you need to edit beforehand to convey the right settings
+is 
+`run_parameters.sh` that needs to be made specifically for each of your data sets.
+In this script, you'll convey the output directory, the read length (minus 1), 
+reference files to be used, the protocol, whether targeted-sequencing analysis 
+should be performed (no unless you know what this means), and whether the protocol 
+is stranded (usually yes).
+
+The main bash script can be found is: `L_TS_submit_vasaplate_map_LOCAL.sh`, 
+this consists of multiple steps:
+1. Extract cell barcodes
+2. Trimming
+3. Ribosomal mapping and discarding rRNA reads
+4. Mapping with STAR
+5. Custom script that deals with multi-mappers
+6. Creating count tables with custom Python scripts
+7. (Targeted-sequencing specific stuff, not applicable.)
 
 
 
