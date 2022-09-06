@@ -61,6 +61,7 @@ reference files to be used, the protocol, whether targeted-sequencing analysis
 should be performed (no unless you know what this means), and whether the protocol 
 is stranded (usually yes).
 
+### Part A, pre-processing and mapping with STAR
 The main bash script can be found is: `L_TS_submit_vasaplate_map_LOCAL.sh`, 
 this consists of multiple steps:
 1. Extract cell barcodes
@@ -68,13 +69,19 @@ this consists of multiple steps:
 3. Ribosomal mapping and discarding rRNA reads
 4. Mapping with STAR
 
-↓option 1↓
+### Part B, creating count tables, ↓option 1↓
 5. Custom script that deals with multi-mappers
 6. Creating count tables with custom Python scripts
 7. (Targeted-sequencing specific stuff, not applicable.)
 
-↓option 2↓
+### Part B, creating count tables, ↓option 2↓
+5. Use "umiCounts" to convert the mapped reads to UMI counts. This requires the script 
+`countTables_umiTools.sh`. Which itself conists of 3 steps:
 
+countTables_umiTools script steps:
+1. featureCounts is called to count features.
+2. The file is re-arranged to accomodate UMI tools input, bam files are sorted, umi_tools is called to count reads. Optionally UMIs are trimmed (this is sort of a hack to deal with UMIs of uneven lengths, which occured in data I handled previously).
+3. Temp files are removed.
 
 
 
