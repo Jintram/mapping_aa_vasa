@@ -29,8 +29,14 @@ References need to set up in a custom way.
 Reference files that are needed are:
 - **riboref** This is a fasta format file that contains all the rRNA sequences.
 - **genome** This is the STAR indexed genome.
+
+### For the custom written read counting
 - **refBED** This is the annotation of the genome, encoded in a customized bed file. This bed file is generated based on a gtf file, see the file: `./setting_up/convert_gtf_to_bed.sh`.
 
+### For the UMItools read counting
+- **gtffile** Standard gtf file.
+
+### Software
 There's a file called `general_parameters.sh` which contains file paths to the
 software that needs to be installed.
 - path to directory with these custom scripts
@@ -61,11 +67,13 @@ this consists of multiple steps:
 2. Trimming
 3. Ribosomal mapping and discarding rRNA reads
 4. Mapping with STAR
+
+↓option 1↓
 5. Custom script that deals with multi-mappers
 6. Creating count tables with custom Python scripts
 7. (Targeted-sequencing specific stuff, not applicable.)
 
-
+↓option 2↓
 
 
 

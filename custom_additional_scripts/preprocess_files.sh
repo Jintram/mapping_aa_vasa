@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# srun --nodes=1 --time=02:00:00 --pty bash -i
+
 currentpath=/Volumes/workdrive_m.wehrens_hubrecht/sequencing_raw_files/Allelic_Pilot3_cat/
 
 gunzip ${currentpath}*.gz
