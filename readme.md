@@ -94,7 +94,7 @@ For that purpose, the standard pipeline can be used.
 ## Mapping paired end data (without UMIs or barcodes)
 
 For that purpose I wrote some scripts that are now in the bulk sequencing folder
-(`bulk_seq_mapping`). See also https://github.com/Jintram/mapping_aa_vasa.
+(`bulk_seq_mapping`). See also https://github.com/Jintram/mapping_aa_vasa/tree/master/bulk_seq_mapping.
 
 
 
