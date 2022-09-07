@@ -91,8 +91,8 @@ done
 
 ### Bulk seq scripts
 # see --> ./bulk_seq_mapping
+# Submission of jobs, see: ./projects/Sjoerd_202209/submit_jobs_Sjoerd.sh
 
-# TODO! copy submit file to this directory.
 
 # Has worked, although some samples seem to have empty count tables
 # e.g.
