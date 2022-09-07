@@ -89,7 +89,14 @@ done
 # bulk seq pipeline.
 
 
+### Bulk seq scripts
+# see --> ./bulk_seq_mapping
 
+# TODO! copy submit file to this directory.
+
+# Has worked, although some samples seem to have empty count tables
+# e.g.
+# clone-12-no-dox-rep2_AAC3KKWM5_S20
 
 
 
