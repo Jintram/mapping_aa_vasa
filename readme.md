@@ -85,14 +85,20 @@ countTables_umiTools script steps:
 2. The file is re-arranged to accomodate UMI tools input, bam files are sorted, umi_tools is called to count reads. Optionally UMIs are trimmed (this is sort of a hack to deal with UMIs of uneven lengths, which occured in data I handled previously).
 3. Temp files are removed.
 
-## Some notes about processing bulk sequencing information
+# Bulk RNA sequencing
 
-When mapping bulk sequencing sequences without UMI or BC, I think we can simply
-set the length of the umi and bc to zero, such that these tags remain empty, 
-and then simply use `steps 1-4` and then umiTools `step 1`; then that output 
-needs to be processed further.
+## Mapping CEL-Seq2 generated bulk RNA sequencing
 
-(Note that it would of course be more efficient to write a script that doesn't
-have all the options i'm using here for such type of mapping.)
+For that purpose, the standard pipeline can be used. 
+
+## Mapping paired end data (without UMIs or barcodes)
+
+For that purpose I wrote some scripts that are now in the bulk sequencing folder
+(`bulk_seq_mapping`). See also https://github.com/Jintram/mapping_aa_vasa.
+
+
+
+
+
 
 
