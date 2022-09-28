@@ -116,7 +116,7 @@ GCTAAACCTAGCCCCAAACCCACTCCACCTTACTACCAGACAACCTTAGCCAAACCATTTACCCAAATAAAGTATAGGCG
 
 Reference genomes can be downloaded from http://ensembl.org. 
 
-# Primary assembly fa reference file
+### Primary assembly fa reference file
 At the time of writing, a convenient overview can be found at:
 http://www.ensembl.org/info/data/ftp/index.html/
 E.g. for mice, follow the link to:
@@ -124,7 +124,7 @@ http://ftp.ensembl.org/pub/release-107/fasta/mus_musculus/dna/
 and then download the file:
 `Mus_musculus.GRCm39.dna.primary_assembly.fa.gz`
 
-# Gene annotation file
+### Gene annotation file
 Above website refers you to:
 http://ftp.ensembl.org/pub/release-107/gtf/mus_musculus/
 and then you'll need:
