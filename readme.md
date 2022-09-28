@@ -155,6 +155,30 @@ The (I think) custom-made file contains the following sequences for mice:
 
 See also VanInsberghe et al. Nature. 2021 http://doi.org/10.1038/s41586-021-03887-4.
 
+### "Installing" the reference for STAR
+
+You'll need to first perform "indexing" before STAR can use the genome. Since this task
+also takes computing power, the command is incorporated in the following script:
+
+```./STAR/generate_index_STAR.sh```
+
+Examples how to start this scripts are given in the `./STAR/submit_index_star.sh` script.
+
+You'll need to navigate to the directory with the genomes (e.g. /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107/ in my case),
+and the parameters that give the fasta file and gtf file, e.g.:
+```
+fafile=./ensembl/Mus_musculus.GRCm39.dna.primary_assembly.fa
+gtffile=./ensembl/Mus_musculus.GRCm39.107.gtf.gz
+overhang=49
+
+sbatch --export=ALL,fafile="${fafile}",gtffile="${gtffile}",overhang="$overhang" generate_index_STAR.sh 
+```
+The overhang parameter is simply the max read length minus one (see documentation).
+Note that the script will assume the files are zipped, but requires the filenames without .gz extension.
+
+
+
+
 
 
 

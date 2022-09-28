@@ -11,3 +11,6 @@ gtffile=./ensembl/Homo_sapiens.GRCh38.93.gtf
 overhang=49
 
 sbatch --export=ALL,fafile="${fafile}",gtffile="${gtffile}",overhang="$overhang" generate_index_STAR.sh 
+
+
+
