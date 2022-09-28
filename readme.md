@@ -148,13 +148,12 @@ GCTAAACCTAGCCCCAAACCCACTCCACCTTACTACCAGACAACCTTAGCCAAACCATTTACCCAAATAAAGTATAGGCG
 Ribosomal genes are found in repeating patterns and are therefor a bit curious to annotate. E.g. for mice, see also https://www.ncbi.nlm.nih.gov/gene?cmd=retrieve&list_uids=100861531.
 
 The (I think) custom-made file contains the following sequences for mice:
-- rRNA-Rn45s; this is the sequence fount at https://www.ncbi.nlm.nih.gov/nuccore/NR_046233.2?report=fasta
-- rRNA-Rn5s; this is the sequence found at https://www.ncbi.nlm.nih.gov/nuccore/NR_030686.1?report=fasta
-- rRNA-12s_16s; 
-- rRNA-Rn47s;
+- rRNA-Rn45s; this is the sequence `NR_046233.2` found at https://www.ncbi.nlm.nih.gov/nuccore/NR_046233.2?report=fasta
+- rRNA-Rn5s; this is the sequence `NR_030686.1` found at https://www.ncbi.nlm.nih.gov/nuccore/NR_030686.1?report=fasta
+- rRNA-12s_16s; this seems to be sequence `V00665.1` at https://www.ncbi.nlm.nih.gov/nuccore/V00665.1?report=fasta
+- rRNA-Rn47s; this seems to be sequence `AH002076.2` at https://www.ncbi.nlm.nih.gov/nuccore/AH002076.2?report=fasta
 
 See also VanInsberghe et al. Nature. 2021 http://doi.org/10.1038/s41586-021-03887-4.
-(TO DO: find out where these latter two files come from.)
 
 
 
