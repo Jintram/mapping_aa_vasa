@@ -102,7 +102,7 @@ For that purpose I wrote some scripts that are now in the bulk sequencing folder
 
 You need three files:
 1. The STAR reference files.
-2. The gtf file (gene annotation). This needs to be converted to a custom format if you want to use the custom annotation scripts that were written for Vasa.
+2. The gtf file (gene annotation). This needs to be converted to a custom format if you want to use the custom annotation scripts that were written for Vasa, but not if you're using "option B" for creating the count tables, ie umiCounts. The umiCounts method directly uses the .gtf file.
 3. A fasta file with all ribosomal RNA sequences (this is only used for recognizing and discarding those reads). This is a very straightforward file in fasta format, e.g.:
 ```
 >12S_RNR1
