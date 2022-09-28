@@ -132,8 +132,10 @@ and then you'll need:
 
 Both these files can be downloaded directly at a server by using the commands:
 
+```
 wget http://ftp.ensembl.org/pub/release-107/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
 wget http://ftp.ensembl.org/pub/release-107/gtf/mus_musculus/Mus_musculus.GRCm39.107.gtf.gz
+```
 
 See the folder `./setting_up/` for conversion scripts that take the .gtf file as input and output the customized bed format, you'll need the script `convert_gtf_to_bed.sh`.
 
