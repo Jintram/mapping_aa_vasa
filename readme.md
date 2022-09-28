@@ -96,6 +96,47 @@ For that purpose, the standard pipeline can be used.
 For that purpose I wrote some scripts that are now in the bulk sequencing folder
 (`./bulk_seq_mapping`). See also https://github.com/Jintram/mapping_aa_vasa/tree/master/bulk_seq_mapping.
 
+# How to install a new genome
+
+## Required files
+
+You need three files:
+1. The STAR reference files.
+2. The gtf file (gene annotation). This needs to be converted to a custom format if you want to use the custom annotation scripts that were written for Vasa.
+3. A fasta file with all ribosomal RNA sequences (this is only used for recognizing and discarding those reads). This is a very straightforward file in fasta format, e.g.:
+```
+>12S_RNR1
+AATAGGTTTGGTCCTAGCCTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATCCCCGTTCCAGTGAGTTCACCCTCTAAATCACCACGATCAAAAGGAACAAGCATCAAGCACGCAGCAATGCAGCTCAAAACGC(...)
+>16S_RNR2
+GCTAAACCTAGCCCCAAACCCACTCCACCTTACTACCAGACAACCTTAGCCAAACCATTTACCCAAATAAAGTATAGGCGATAGAAATTGAAACCTGGCGCAATAGATATAGTACCGCAAGGGAAAGATGAAAAATTATAACCAAGC(...)
+(...)
+```
+
+## Downloading reference files.
+
+Reference genomes can be downloaded from http://ensembl.org. 
+
+# Primary assembly fa reference file
+At the time of writing, a convenient overview can be found at:
+http://www.ensembl.org/info/data/ftp/index.html/
+E.g. for mice, follow the link to:
+http://ftp.ensembl.org/pub/release-107/fasta/mus_musculus/dna/
+and then download the file:
+`Mus_musculus.GRCm39.dna.primary_assembly.fa.gz`
+
+# Gene annotation file
+Above website refers you to:
+http://ftp.ensembl.org/pub/release-107/gtf/mus_musculus/
+and then you'll need:
+`Mus_musculus.GRCm39.107.gtf.gz`
+
+Both these files can be downloaded directly at a server by using the commands:
+
+wget http://ftp.ensembl.org/pub/release-107/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+wget http://ftp.ensembl.org/pub/release-107/gtf/mus_musculus/Mus_musculus.GRCm39.107.gtf.gz
+
+See the folder `./setting_up/` for conversion scripts that take the .gtf file as input and output the customized bed format, you'll need the script `convert_gtf_to_bed.sh`.
+
 
 
 
