@@ -151,7 +151,7 @@ The (I think) custom-made file contains the following sequences for mice:
 - rRNA-Rn45s; this is the sequence fount at https://www.ncbi.nlm.nih.gov/nuccore/NR_046233.2?report=fasta
 - rRNA-Rn5s; this is the sequence found at https://www.ncbi.nlm.nih.gov/nuccore/NR_030686.1?report=fasta
 - rRNA-12s_16s; 
-- rRNA-Rn47s
+- rRNA-Rn47s;
 
 See also VanInsberghe et al. Nature. 2021 http://doi.org/10.1038/s41586-021-03887-4.
 (TO DO: find out where these latter two files come from.)
