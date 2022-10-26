@@ -102,7 +102,7 @@ For that purpose I wrote some scripts that are now in the bulk sequencing folder
 
 You need three files:
 1. The STAR reference files.
-2. The gtf file (gene annotation). This needs to be converted to a custom format if you want to use the custom annotation scripts that were written for Vasa, but not if you're using "option B" for creating the count tables, ie umiCounts. The umiCounts method directly uses the .gtf file.
+2. The gtf file (gene annotation), also a filtered version if you want only transcriptome or other biotype filtering. Additionally, this needs to be converted to a custom format if you want to use the custom annotation scripts that were written for Vasa, but not if you're using "option B" for creating the count tables, ie umiCounts. The umiCounts method directly uses the .gtf file.
 3. A fasta file with all ribosomal RNA sequences (this is only used for recognizing and discarding those reads). 
 
 ## Downloading reference files.
@@ -164,18 +164,20 @@ also takes computing power, the command is incorporated in the following script:
 
 Examples how to start this scripts are given in the `./STAR/submit_index_star.sh` script.
 
-You'll need to navigate to the directory with the genomes (e.g. /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107/ in my case),
-and the parameters that give the fasta file and gtf file, e.g.:
+You'll need to navigate to the directory with the genomes (e.g. /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107/ in my case), copy the `generate_index_STAR.sh` file into that directory, and start the job appropriately, e.g.:
 ```
 fafile=./ensembl/Mus_musculus.GRCm39.dna.primary_assembly.fa
 gtffile=./ensembl/Mus_musculus.GRCm39.107.gtf.gz
-overhang=49
+overhang=150
 
 sbatch --export=ALL,fafile="${fafile}",gtffile="${gtffile}",overhang="$overhang" generate_index_STAR.sh 
 ```
 The overhang parameter is simply the max read length minus one (see documentation).
 Note that the script will assume the files are zipped, but requires the filenames without .gz extension.
 
+### Filtering the gtf file.
+
+To filter the gtf file, you can use `./setting_up/filter_GTF_file.sh`.
 
 
 

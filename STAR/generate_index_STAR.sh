@@ -31,5 +31,13 @@ gunzip ${gtffile}.gz
 --genomeFastaFiles ${fafile} \
 --sjdbGTFfile ${gtffile} \
 --sjdbOverhang ${overhang}
+  # From the documentation:
+  #The basic options to generate genome indices are as follows:
+  # --runThreadN NumberOfThreads
+  # --runMode genomeGenerate
+  # --genomeDir /path/to/genomeDir
+  # --genomeFastaFiles /path/to/genome/fasta1 /path/to/genome/fasta2 ...
+  # --sjdbGTFfile /path/to/annotations.gtf
+  # --sjdbOverhang ReadLength-1
 
 # gzip ./ensembl/*
