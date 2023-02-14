@@ -109,6 +109,27 @@ You need three files:
 
 Reference genomes can be downloaded from http://ensembl.org. 
 
+### ERCC RNA Spike-In Control Mixes
+
+In case Spike-ins were added, you also need the sequences and annotation for these.
+
+Through our ordernr I ended up on Thermofisher website, 
+https://www.thermofisher.com/order/catalog/product/4456740
+Then looked for manuals and protocols
+https://www.thermofisher.com/search/results?query=4456740&persona=DocSupport&type=Product+FAQs&filter=document.result_type_s%3AManuals%20%26%20Protocols&refinementAction=true
+
+Manual:
+https://assets.thermofisher.com/TFS-Assets/LSG/manuals/cms_086340.pdf
+
+This manual refers to: www.appliedbiosystems.com.
+
+If you search that website for ERCC92.fa, you find an ERCC92 zip file:
+https://www.thermofisher.com/search/results?query=ERCC92.fa&focusarea=Search%20All
+--> "ERCC92.fa & ERCC92.gtf sequence and annotation files (.zip)"
+--> https://assets.thermofisher.com/TFS-Assets/LSG/manuals/ERCC92.zip
+
+This gives you the ERCC92.fa and ERCC92.gtf file that you need.
+
 ### Primary assembly fa reference file
 At the time of writing, a convenient overview can be found at:
 http://www.ensembl.org/info/data/ftp/index.html/
