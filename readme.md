@@ -205,6 +205,18 @@ Note that the script will assume the files are zipped, but requires the filename
 
 To filter the gtf file, you can use `./setting_up/filter_GTF_file.sh`.
 
+### Combining ERCC and genome files
+
+The .fa for respectively the ERCC and genome can simply be merged, as can the
+.gtf files.
+
+Example commands:
+
+```
+cat /hpc/hub_oudenaarden/mwehrens/ref/ERCC/ERCC92.fa /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107/ensembl/Mus_musculus.GRCm39.dna.primary_assembly.fa > /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107.ERCC/GRCm39.dna.primary_plus_ERCC.fa
+
+cat /hpc/hub_oudenaarden/mwehrens/ref/ERCC/ERCC92.gtf /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107/ensembl/filteredcustom_Mus_musculus.GRCm39.107.gtf > /hpc/hub_oudenaarden/mwehrens/ref/GRCm39.107.ERCC/GRCm39.dna.primary_plus_ERCC.gtf
+```
 
 
 

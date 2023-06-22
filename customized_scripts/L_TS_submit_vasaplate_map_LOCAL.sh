@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Comment:
+# This script is inconveniently named "LOCAL", this script is intended
+# for running @HPC.
+
 # Another way to get dir of scripts
 #SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -62,6 +66,11 @@ if [[ "${TMPDIR}" == "" ]]; then
   TMPDIR=${outdir}
 fi
 
+# This is an option for when you want to repeat part of the analysis 
+# Should not be done per default..
+if [[ $loadtmpwithoutdir != "" ]]; then
+  cp $outdir/${lib}* $TMPDIR/
+fi
 
 # Option to first run another script
 # (I put this in to move a file to the temporary drive to 
@@ -125,8 +134,13 @@ if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
     ### trim files
     # (no local version needed)
     
+    echo "Starting step 2"
+    
     # For polyT (if applicable):
     if [[ -f "${TMPDIR}/${lib}_pT_R2_cbc.fastq.gz" ]]; then
+      
+      echo "Starting step 2, pT"
+      
       ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_pT_R2
       exitcode=$?
       
@@ -134,20 +148,32 @@ if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
         echo "@step2 terminating because script didn't properly end."
         exit 1
       fi
+      
+      P=1
     fi
     
-    # For non-classified:
-    ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2 
-    exitcode=$?
-    
-    if [[ $exitcode -ne 0 ]]; then
-      echo "@step2 terminating because script didn't properly end."
-      exit 1
+    # For non-classified (if applicable):
+    if [[ -f "${TMPDIR}/${lib}_nc_R2_cbc.fastq.gz" ]]; then
+      
+      echo "Starting step 2, nc"
+      
+      ${p2s}/TS_trim.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2 
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step2 terminating because script didn't properly end."
+        exit 1
+      fi
+      
+      P=1
+      
     fi
     
     # For TS (if applicable)
     if [ $TS = '1' ]; then
       echo "Currently work in progress!"
+      
+      echo "Starting step 2, TS"
       
       ${p2s}/TS_trim_paired.sh $general_parameter_filepath $run_parameter_filepath ${lib}_TS 
       exitcode=$?
@@ -156,9 +182,18 @@ if [[ "${step}" == *"(2)"* || "${step}" == "default" ]]; then
         echo "@step2 terminating because script didn't properly end."
         exit 1
       fi
+      
+      P=1
+      
     fi
   
 fi
+
+if [[ $P -ne 1 ]]; then
+  echo "Terminating after step 2, no files were processed (found) .."
+  exit 1
+fi
+
 t_s2=$(date +%s)
 echo "Step 2 took: $(($t_s2-$t_s1)) seconds"
 
@@ -182,16 +217,18 @@ if [[ "${step}" == *"(3)"* || "${step}" == "default" ]]; then
         fi
       fi
       
-      # map unclassified reads to ribo
-      ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG 
-      exitcode=$?
-      
-      if [[ $exitcode -ne 0 ]]; then
-        echo "@step3 terminating because script didn't properly end."
-        exit 1
+      # map unclassified reads to ribo, if applicable
+      if [[ -f "${TMPDIR}/${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz" ]]; then
+        ${p2s}/L_TS_ribo-bwamem.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_R2_cbc_trimmed_HATCG.fq.gz ${lib}_nc_cbc_trimmed_HATCG 
+        exitcode=$?
+        
+        if [[ $exitcode -ne 0 ]]; then
+          echo "@step3 terminating because script didn't properly end."
+          exit 1
+        fi
       fi
       
-      # map targeted reads to ribo
+      # map targeted reads to ribo, if applicable
       if [ $TS = '1' ]; then
         ${p2s}/L_TS_ribo-bwamem_paired.sh ${lib}_TS_R1_cbc_val_1_HATCG.fq.gz ${lib}_TS_R2_cbc_val_2_HATCG.fq.gz ${lib}_TS_cbc_val_HATCG $p2bwa $p2samtools y $p2s
         exitcode=$?
@@ -221,12 +258,14 @@ if [[ "${step}" == *"(4)"* || "${step}" == "default" ]]; then
     fi
     
     # Then for the unclassified data (single)
-    ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
-    exitcode=$?
-    
-    if [[ $exitcode -ne 0 ]]; then
-      echo "@step4 terminating because script didn't properly end."
-      exit 1
+    if [[ -f "${TMPDIR}/${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq.gz" ]]; then
+      ${p2s}/L_TS_map_star.sh $general_parameter_filepath $run_parameter_filepath ${lib}_nc_cbc_trimmed_HATCG.nonRibo.fastq ${lib}_nc.nonRibo_E99_
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step4 terminating because script didn't properly end."
+        exit 1
+      fi
     fi
     
     # For the paired TS data:
@@ -268,12 +307,14 @@ if [[ "${step}" == *"(5)"* || "${step}" == "default" ]]; then
     fi
     
     # For nc subset
-    ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_nc.nonRibo_E99_Aligned.out.bam n
-    exitcode=$?
-    
-    if [[ $exitcode -ne 0 ]]; then
-      echo "@step5 terminating because script didn't properly end."
-      exit 1
+    if [[ -f "${TMPDIR}/${lib}_nc.nonRibo_E99_Aligned.out.bam" ]]; then
+      ${p2s}/L_TS_deal_with_singleandmultimappers_paired_stranded.sh  $general_parameter_filepath $run_parameter_filepath ${lib}_nc.nonRibo_E99_Aligned.out.bam n
+      exitcode=$?
+      
+      if [[ $exitcode -ne 0 ]]; then
+        echo "@step5 terminating because script didn't properly end."
+        exit 1
+      fi
     fi
     
     # For TS subset
